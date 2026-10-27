@@ -1,0 +1,14 @@
+{
+  "name": "concurrency",
+  "description": "Swift concurrency: tasks and actor hops",
+  "flowThrough": [
+    { "id": "concurrency.task", "call": "Task(priority:operation:)", "closures": { "operation": { "async": true, "on": "task" } } },
+    {
+      "id": "concurrency.task-detached",
+      "call": "Task.detached(priority:operation:)",
+      "closures": { "operation": { "async": true, "on": "task" } }
+    },
+    { "id": "concurrency.main-actor-run", "call": "MainActor.run(resultType:body:)", "result": "closure:body" },
+    { "id": "concurrency.task-value", "member": "*.value", "result": "receiver[]" }
+  ]
+}

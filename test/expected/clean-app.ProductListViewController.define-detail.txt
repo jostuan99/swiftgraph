@@ -1,0 +1,54 @@
+ProductListViewController  [UIViewController, layer View]  Sources/CleanApp/Presentation/ProductListViewController.swift:4
+  state:     viewModel: ProductListViewModel  ProductListViewController.swift:5
+  children:  ProductCell (cell of ProductListViewController#5, ProductListViewController.swift:24)
+
+ITEMS (7)
+ id                                               line                                kind         dir      when                        datasource
+ ProductListViewController#1                      ProductListViewController.swift:30  UILabel      display                              GET https://api.example.com/v1/products title
+ ProductListViewController#2                      ProductListViewController.swift:36  UILabel      display  let date && !(date == nil)  userDefaults "lastUpdated"
+ ProductListViewController#3                      ProductListViewController.swift:43  UILabel      display  !(message == nil)           error GET https://api.example.com/v1/products
+ ProductListViewController#4                      ProductListViewController.swift:26  UIButton     action                               localization "refresh"
+ ProductListViewController#5                      ProductListViewController.swift:57  UITableView  list                                 GET https://api.example.com/v1/products items
+ ProductCell#1  (in ProductListViewController#5)  ProductListViewController.swift:72  UILabel      display                              GET https://api.example.com/v1/products items[].product_name
+ ProductCell#2  (in ProductListViewController#5)  ProductListViewController.swift:73  UILabel      display                              GET https://api.example.com/v1/products items[].price
+
+DATA
+ #1             text    literal ""                                                                                                                                                                                     ProductListViewModel.swift:11
+                          → ProductListViewModel.title [ViewModel] → ProductListViewController.viewDidLoad() [View]
+                        api  GET "https://api.example.com/v1/products" → serializingDecodable → ProductListResponse.title: String  JSON "title"                                                                        ProductService.swift:17
+                          → ProductServiceImpl.fetchProducts() [Service] → ProductRepositoryImpl.products() [Repository] → ProductListViewModel.reload() [ViewModel] → ProductListViewController.viewDidLoad() [View]
+ #2             text    computed  DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short)                                                                                                      ProductListViewController.swift:36
+                          from: local.userDefaults "lastUpdated"  UserDefaults.object → Any? as Date  (SettingsStore.swift:7)
+                          from: instance Date()  (ProductListViewModel.swift:33)
+ #3             text    literal nil                                                                                                                                                                                    ProductListViewModel.swift:26
+                          → ProductListViewModel.reload() [ViewModel] → ProductListViewController.viewDidLoad() [View]
+                        error AFError.errorDescription  thrown by repository.products()  (GET https://api.example.com/v1/products)                                                                                     ProductListViewModel.swift:35
+                          → ProductListViewModel.reload() [ViewModel] → ProductListViewController.viewDidLoad() [View]
+                        error.localizedDescription  thrown by repository.products()  (GET https://api.example.com/v1/products)                                                                                         ProductListViewModel.swift:37
+                          → ProductListViewModel.reload() [ViewModel] → ProductListViewController.viewDidLoad() [View]
+ #4             title   localization  Localizable "refresh"  en "Refresh", ja "更新"                                                                                                                                     ProductListViewController.swift:26
+                action  #selector(didTapRefresh)                                                                                                                                                                       ProductListViewController.swift:27
+                        flows: swiftgraph flows ProductListViewController --entry ProductListViewController#4
+ #5             rows    local.file  JSONDecoder.decode → [ProductDTO]                                                                                                                                                  ProductCache.swift:8
+                          → ProductCache.load() [Storage] → ProductRepositoryImpl.cachedProducts() [Repository] → ProductListViewModel.init(repository:settings:) [ViewModel]
+                          value: local.file "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")"  Data(contentsOf:) → Data  (ProductCache.swift:7)
+                        api  GET "https://api.example.com/v1/products" → serializingDecodable → ProductListResponse.items: [ProductDTO]  JSON "items"                                                                  ProductService.swift:17
+                          → ProductServiceImpl.fetchProducts() [Service] → ProductRepositoryImpl.products() [Repository] → ProductListViewModel.reload() [ViewModel]
+ ProductCell#1  text    local.file  JSONDecoder.decode → [ProductDTO][].name: String                                                                                                                                   ProductCache.swift:8
+                          → ProductCache.load() [Storage] → ProductRepositoryImpl.cachedProducts() [Repository] → ProductListViewModel.init(repository:settings:) [ViewModel] → ProductCell.configure(with:) [View]
+                          value: local.file "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")"  Data(contentsOf:) → Data  (ProductCache.swift:7)
+                        api  GET "https://api.example.com/v1/products" → serializingDecodable → ProductListResponse.items[].name: String  JSON "product_name"                                                          ProductService.swift:17
+                          → ProductServiceImpl.fetchProducts() [Service] → ProductRepositoryImpl.products() [Repository] → ProductListViewModel.reload() [ViewModel] → ProductCell.configure(with:) [View]
+ ProductCell#2  text    local.file  JSONDecoder.decode → [ProductDTO][].price: Decimal                                                                                                                                 ProductCache.swift:8
+                          → ProductCache.load() [Storage] → ProductRepositoryImpl.cachedProducts() [Repository] → ProductListViewModel.init(repository:settings:) [ViewModel] → ProductCell.configure(with:) [View]
+                          value: local.file "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")"  Data(contentsOf:) → Data  (ProductCache.swift:7)
+                        api  GET "https://api.example.com/v1/products" → serializingDecodable → ProductListResponse.items[].price: Decimal  JSON "price"                                                               ProductService.swift:17
+                          → ProductServiceImpl.fetchProducts() [Service] → ProductRepositoryImpl.products() [Repository] → ProductListViewModel.reload() [ViewModel] → ProductCell.configure(with:) [View]
+
+SUMMARY
+ api           GET "https://api.example.com/v1/products" → serializingDecodable → ProductListResponse  .title: String "title", .items: [ProductDTO] "items", .items[].name: String "product_name", .items[].price: Decimal "price"
+ local         "lastUpdated"  UserDefaults.object → Any?
+ file          JSONDecoder.decode → [ProductDTO]  [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")"  Data(contentsOf:) → Data
+ error         GET https://api.example.com/v1/products
+ localization  Localizable: 1 key
+ unresolved    none

@@ -1,0 +1,15 @@
+{
+  "name": "swinject",
+  "description": "Swinject container registrations: protocol → implementation",
+  "whenImports": ["Swinject"],
+  "injection": [
+    { "id": "swinject.register", "register": "*.register(_:factory:)", "service": 0, "factory": "factory", "imports": "Swinject" },
+    {
+      "id": "swinject.register-named",
+      "register": "*.register(_:name:factory:)",
+      "service": 0,
+      "factory": "factory",
+      "imports": "Swinject"
+    }
+  ]
+}

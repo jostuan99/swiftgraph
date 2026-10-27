@@ -1,0 +1,29 @@
+{
+  "name": "swiftdata",
+  "description": "SwiftData: @Query and ModelContext fetches",
+  "whenImports": ["SwiftData"],
+  "sources": [
+    {
+      "id": "swiftdata.query",
+      "kind": "local.swiftData",
+      "attribute": "Query"
+    },
+    {
+      "id": "swiftdata.fetch",
+      "kind": "local.swiftData",
+      "call": "ModelContext.fetch(_:)"
+    },
+    {
+      "id": "swiftdata.insert",
+      "kind": "local.swiftData",
+      "call": "ModelContext.insert(_:)",
+      "direction": "write"
+    },
+    {
+      "id": "swiftdata.save",
+      "kind": "local.swiftData",
+      "call": "ModelContext.save()",
+      "direction": "write"
+    }
+  ]
+}

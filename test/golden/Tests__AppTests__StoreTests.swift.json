@@ -1,0 +1,365 @@
+{
+  "version": 10,
+  "imports": [
+    "XCTest",
+    "Testing",
+    "Core"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "class",
+      "name": "StoreTests",
+      "selector": "StoreTests",
+      "signature": "class StoreTests: XCTestCase",
+      "access": null,
+      "modifiers": [
+        "final"
+      ],
+      "attributes": [],
+      "range": [
+        5,
+        1,
+        11,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "XCTestCase"
+      ]
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "function",
+      "name": "testSendAddsItem",
+      "selector": "testSendAddsItem()",
+      "signature": "func testSendAddsItem()",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        6,
+        5,
+        10,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": []
+    },
+    {
+      "localId": 2,
+      "parent": null,
+      "kind": "function",
+      "name": "previewHasOneItem",
+      "selector": "previewHasOneItem()",
+      "signature": "func previewHasOneItem()",
+      "access": null,
+      "modifiers": [],
+      "attributes": [
+        "Test"
+      ],
+      "range": [
+        13,
+        1,
+        15,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": []
+    }
+  ],
+  "references": [
+    {
+      "from": 0,
+      "kind": "inherit",
+      "name": "XCTestCase",
+      "line": 5,
+      "column": 25
+    },
+    {
+      "from": 1,
+      "kind": "call",
+      "name": "Store",
+      "line": 7,
+      "column": 21,
+      "selector": "Store()",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "Void",
+      "line": 7,
+      "column": 27
+    },
+    {
+      "from": 1,
+      "kind": "call",
+      "name": "send",
+      "line": 8,
+      "column": 15,
+      "selector": "send(_:)",
+      "receiver": {
+        "kind": "variable",
+        "name": "store",
+        "typeHint": "Store",
+        "explicit": false
+      }
+    },
+    {
+      "from": 1,
+      "kind": "call",
+      "name": "add",
+      "line": 8,
+      "column": 20,
+      "selector": "add(_:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 1,
+      "kind": "call",
+      "name": "Item",
+      "line": 8,
+      "column": 25,
+      "selector": "Item(title:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 1,
+      "kind": "call",
+      "name": "XCTAssertEqual",
+      "line": 9,
+      "column": 9,
+      "selector": "XCTAssertEqual(_:_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 1,
+      "kind": "read",
+      "name": "items",
+      "line": 9,
+      "column": 30,
+      "receiver": {
+        "kind": "variable",
+        "name": "store",
+        "typeHint": "Store",
+        "explicit": false
+      }
+    },
+    {
+      "from": 2,
+      "kind": "attribute",
+      "name": "Test",
+      "line": 13,
+      "column": 1
+    },
+    {
+      "from": 2,
+      "kind": "macro",
+      "name": "expect",
+      "line": 14,
+      "column": 5
+    },
+    {
+      "from": 2,
+      "kind": "call",
+      "name": "preview",
+      "line": 14,
+      "column": 25,
+      "selector": "preview()",
+      "receiver": {
+        "kind": "type",
+        "name": "Store"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "type",
+      "name": "Void",
+      "line": 14,
+      "column": 19
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 1,
+        "name": "Store",
+        "selector": "Store()",
+        "reference": 1,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 7,
+        "column": 21
+      },
+      {
+        "from": 1,
+        "name": "send",
+        "selector": "send(_:)",
+        "reference": 3,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "call",
+              "call": 2
+            }
+          }
+        ],
+        "branch": [],
+        "line": 8,
+        "column": 15,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "store",
+            "scope": 1
+          },
+          "members": []
+        }
+      },
+      {
+        "from": 1,
+        "name": "add",
+        "selector": "add(_:)",
+        "reference": 4,
+        "parent": 1,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "call",
+              "call": 3
+            }
+          }
+        ],
+        "branch": [],
+        "line": 8,
+        "column": 20
+      },
+      {
+        "from": 1,
+        "name": "Item",
+        "selector": "Item(title:)",
+        "reference": 5,
+        "parent": 2,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "title",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "A"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 8,
+        "column": 25
+      },
+      {
+        "from": 1,
+        "name": "XCTAssertEqual",
+        "selector": "XCTAssertEqual(_:_:)",
+        "reference": 6,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "local",
+                "name": "store",
+                "scope": 1
+              },
+              "members": [
+                "items",
+                "count"
+              ]
+            }
+          },
+          {
+            "label": "_",
+            "value": {
+              "kind": "literal",
+              "type": "Int",
+              "value": "1"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 9,
+        "column": 9
+      },
+      {
+        "from": 2,
+        "name": "preview",
+        "selector": "preview()",
+        "reference": 10,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 14,
+        "column": 25,
+        "receiver": {
+          "kind": "compound",
+          "text": "Store<Void>",
+          "operands": [
+            {
+              "kind": "path",
+              "root": {
+                "kind": "type",
+                "name": "Store"
+              },
+              "members": []
+            },
+            {
+              "kind": "compound",
+              "text": "<Void>",
+              "operands": []
+            }
+          ]
+        }
+      }
+    ],
+    "closures": [],
+    "assignments": [],
+    "bindings": [
+      {
+        "from": 1,
+        "scope": 1,
+        "name": "store",
+        "value": {
+          "kind": "call",
+          "call": 0
+        },
+        "line": 7
+      }
+    ],
+    "returns": []
+  },
+  "hasErrors": false
+}

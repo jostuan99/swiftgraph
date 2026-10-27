@@ -1,0 +1,293 @@
+{
+  "version": 10,
+  "imports": [
+    "SwiftUI",
+    "Core"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "struct",
+      "name": "ItemRow",
+      "selector": "ItemRow",
+      "signature": "struct ItemRow: View",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        4,
+        1,
+        14,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "View"
+      ]
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "property",
+      "name": "item",
+      "selector": "item",
+      "signature": "let item: Item",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        5,
+        9,
+        5,
+        19
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "Item",
+      "isComputed": false
+    },
+    {
+      "localId": 2,
+      "parent": 0,
+      "kind": "property",
+      "name": "body",
+      "selector": "body",
+      "signature": "var body: some View",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        7,
+        9,
+        13,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "some View",
+      "isComputed": true
+    }
+  ],
+  "references": [
+    {
+      "from": 0,
+      "kind": "inherit",
+      "name": "View",
+      "line": 4,
+      "column": 17
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "Item",
+      "line": 5,
+      "column": 15
+    },
+    {
+      "from": 2,
+      "kind": "type",
+      "name": "View",
+      "line": 7,
+      "column": 20
+    },
+    {
+      "from": 2,
+      "kind": "call",
+      "name": "HStack",
+      "line": 8,
+      "column": 9,
+      "selector": "HStack(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "call",
+      "name": "Text",
+      "line": 9,
+      "column": 13,
+      "selector": "Text(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "read",
+      "name": "title",
+      "line": 9,
+      "column": 23,
+      "receiver": {
+        "kind": "self_member",
+        "name": "item"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "read",
+      "name": "item",
+      "line": 9,
+      "column": 18,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "call",
+      "name": "Spacer",
+      "line": 10,
+      "column": 13,
+      "selector": "Spacer()",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "call",
+      "name": "Text",
+      "line": 11,
+      "column": 13,
+      "selector": "Text(verbatim:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "read",
+      "name": "status",
+      "line": 11,
+      "column": 33,
+      "receiver": {
+        "kind": "self_member",
+        "name": "item"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "read",
+      "name": "item",
+      "line": 11,
+      "column": 28,
+      "receiver": {
+        "kind": "none"
+      }
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 2,
+        "name": "HStack",
+        "selector": "HStack(_:)",
+        "reference": 3,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "closure",
+              "closure": 0
+            }
+          }
+        ],
+        "branch": [],
+        "line": 8,
+        "column": 9
+      },
+      {
+        "from": 2,
+        "name": "Text",
+        "selector": "Text(_:)",
+        "reference": 4,
+        "parent": null,
+        "closure": 0,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "self"
+              },
+              "members": [
+                "item",
+                "title"
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 9,
+        "column": 13
+      },
+      {
+        "from": 2,
+        "name": "Spacer",
+        "selector": "Spacer()",
+        "reference": 7,
+        "parent": null,
+        "closure": 0,
+        "arguments": [],
+        "branch": [],
+        "line": 10,
+        "column": 13
+      },
+      {
+        "from": 2,
+        "name": "Text",
+        "selector": "Text(verbatim:)",
+        "reference": 8,
+        "parent": null,
+        "closure": 0,
+        "arguments": [
+          {
+            "label": "verbatim",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "self"
+              },
+              "members": [
+                "item",
+                "status",
+                "rawValue"
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 11,
+        "column": 13
+      }
+    ],
+    "closures": [
+      {
+        "scope": 3,
+        "call": 0,
+        "parent": null,
+        "parameters": [],
+        "returns": []
+      }
+    ],
+    "assignments": [],
+    "bindings": [],
+    "returns": [
+      {
+        "from": 2,
+        "value": {
+          "kind": "call",
+          "call": 0
+        },
+        "line": 8
+      }
+    ]
+  },
+  "hasErrors": false
+}

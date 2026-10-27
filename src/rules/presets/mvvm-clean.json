@@ -1,0 +1,83 @@
+{
+  "name": "mvvm-clean",
+  "description": "Layers of MVVM + Clean Architecture by naming convention",
+  "layers": [
+    {
+      "id": "mvvm.view",
+      "layer": "View",
+      "match": {
+        "name": ["*View", "*ViewController", "*Cell", "*Row", "*Screen"]
+      }
+    },
+    {
+      "id": "mvvm.view-model",
+      "layer": "ViewModel",
+      "match": {
+        "name": ["*ViewModel", "*VM", "*ViewData", "*ViewState", "*UIModel", "*DisplayModel"]
+      }
+    },
+    {
+      "id": "mvvm.observable",
+      "layer": "ViewModel",
+      "match": {
+        "conformsTo": "ObservableObject"
+      }
+    },
+    {
+      "id": "mvvm.use-case",
+      "layer": "UseCase",
+      "match": {
+        "name": ["*UseCase", "*UseCaseImpl", "*Interactor"]
+      }
+    },
+    {
+      "id": "mvvm.repository",
+      "layer": "Repository",
+      "match": {
+        "name": ["*Repository", "*RepositoryImpl"]
+      }
+    },
+    {
+      "id": "mvvm.mapper",
+      "layer": "Mapper",
+      "match": {
+        "name": ["*Mapper", "*Translator", "*Converter"]
+      }
+    },
+    {
+      "id": "mvvm.service",
+      "layer": "Service",
+      "match": {
+        "name": ["*Service", "*ServiceImpl", "*Client", "*API", "*Router", "*Endpoint"]
+      }
+    },
+    {
+      "id": "mvvm.coordinator",
+      "layer": "Coordinator",
+      "match": {
+        "name": ["*Coordinator"]
+      }
+    },
+    {
+      "id": "mvvm.storage",
+      "layer": "Storage",
+      "match": {
+        "name": ["*Store", "*Storage", "*Cache", "*Keychain", "*Defaults", "*Dao", "*DAO"]
+      }
+    },
+    {
+      "id": "mvvm.di",
+      "layer": "DI",
+      "match": {
+        "name": ["*Container", "*Assembly", "*Assembler", "*Factory"]
+      }
+    },
+    {
+      "id": "mvvm.entity",
+      "layer": "Entity",
+      "match": {
+        "name": ["*Entity", "*DTO", "*Response", "*Request", "*Session", "*Model"]
+      }
+    }
+  ]
+}

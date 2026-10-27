@@ -1,0 +1,377 @@
+{
+  "version": 10,
+  "imports": [
+    "PackageDescription"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "property",
+      "name": "package",
+      "selector": "package",
+      "signature": "let package",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        4,
+        5,
+        17,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inferredType": "Package",
+      "isComputed": false
+    }
+  ],
+  "references": [
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "Package",
+      "line": 4,
+      "column": 15,
+      "selector": "Package(name:defaultLocalization:platforms:targets:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "iOS",
+      "line": 7,
+      "column": 17,
+      "selector": "iOS(_:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "macOS",
+      "line": 7,
+      "column": 29,
+      "selector": "macOS(_:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "target",
+      "line": 9,
+      "column": 9,
+      "selector": "target(name:path:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "executableTarget",
+      "line": 10,
+      "column": 9,
+      "selector": "executableTarget(name:dependencies:resources:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "process",
+      "line": 13,
+      "column": 25,
+      "selector": "process(_:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "testTarget",
+      "line": 15,
+      "column": 9,
+      "selector": "testTarget(name:dependencies:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 0,
+        "name": "Package",
+        "selector": "Package(name:defaultLocalization:platforms:targets:)",
+        "reference": 0,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "name",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "MiniApp"
+            }
+          },
+          {
+            "label": "defaultLocalization",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "en"
+            }
+          },
+          {
+            "label": "platforms",
+            "value": {
+              "kind": "compound",
+              "text": "[.iOS(.v17), .macOS(.v14)]",
+              "operands": [
+                {
+                  "kind": "call",
+                  "call": 1
+                },
+                {
+                  "kind": "call",
+                  "call": 2
+                }
+              ]
+            }
+          },
+          {
+            "label": "targets",
+            "value": {
+              "kind": "compound",
+              "text": "[ .target(name: \"Core\", path: \"Sources/Core\"), .executableTarget( name: \"App\", dependencies: [\"Core\"], resources: [.proc…",
+              "operands": [
+                {
+                  "kind": "call",
+                  "call": 3
+                },
+                {
+                  "kind": "call",
+                  "call": 4
+                },
+                {
+                  "kind": "call",
+                  "call": 6
+                }
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 4,
+        "column": 15
+      },
+      {
+        "from": 0,
+        "name": "iOS",
+        "selector": "iOS(_:)",
+        "reference": 1,
+        "parent": 0,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "case",
+              "name": "v17"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 7,
+        "column": 17
+      },
+      {
+        "from": 0,
+        "name": "macOS",
+        "selector": "macOS(_:)",
+        "reference": 2,
+        "parent": 0,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "case",
+              "name": "v14"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 7,
+        "column": 29
+      },
+      {
+        "from": 0,
+        "name": "target",
+        "selector": "target(name:path:)",
+        "reference": 3,
+        "parent": 0,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "name",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "Core"
+            }
+          },
+          {
+            "label": "path",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "Sources/Core"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 9,
+        "column": 9
+      },
+      {
+        "from": 0,
+        "name": "executableTarget",
+        "selector": "executableTarget(name:dependencies:resources:)",
+        "reference": 4,
+        "parent": 0,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "name",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "App"
+            }
+          },
+          {
+            "label": "dependencies",
+            "value": {
+              "kind": "compound",
+              "text": "[\"Core\"]",
+              "operands": [
+                {
+                  "kind": "literal",
+                  "type": "String",
+                  "value": "Core"
+                }
+              ]
+            }
+          },
+          {
+            "label": "resources",
+            "value": {
+              "kind": "compound",
+              "text": "[.process(\"Resources\")]",
+              "operands": [
+                {
+                  "kind": "call",
+                  "call": 5
+                }
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 10,
+        "column": 9
+      },
+      {
+        "from": 0,
+        "name": "process",
+        "selector": "process(_:)",
+        "reference": 5,
+        "parent": 4,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "Resources"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 13,
+        "column": 25
+      },
+      {
+        "from": 0,
+        "name": "testTarget",
+        "selector": "testTarget(name:dependencies:)",
+        "reference": 6,
+        "parent": 0,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "name",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "AppTests"
+            }
+          },
+          {
+            "label": "dependencies",
+            "value": {
+              "kind": "compound",
+              "text": "[\"App\"]",
+              "operands": [
+                {
+                  "kind": "literal",
+                  "type": "String",
+                  "value": "App"
+                }
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 15,
+        "column": 9
+      }
+    ],
+    "closures": [],
+    "assignments": [
+      {
+        "from": 0,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "package"
+          ]
+        },
+        "value": {
+          "kind": "call",
+          "call": 0
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 4
+      }
+    ],
+    "bindings": [],
+    "returns": []
+  },
+  "hasErrors": false
+}

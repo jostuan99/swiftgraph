@@ -1,0 +1,65 @@
+# Expected semantic edges of test/fixtures/mini-app, written by hand before
+# the resolver exists (G0). G2 tests check that the resolver produces at least
+# these edges with these confidences, and none of the edges listed under
+# "absent".
+#
+# Columns: source <TAB> kind <TAB> target <TAB> confidence
+# External symbols use the module of the import that provides them.
+
+# Types and conformance
+swift:Core/Item	CONFORMS_TO	swift:Core/Listable	EXTRACTED
+swift:Core/Item	CONFORMS_TO	swift:Swift/Hashable	INFERRED
+swift:Core/Status	CONFORMS_TO	swift:Swift/CaseIterable	INFERRED
+swift:Core/ConsoleLogger	CONFORMS_TO	swift:Core/Logging	EXTRACTED
+swift:Core/PrefixLogger	INHERITS	swift:Core/ConsoleLogger	EXTRACTED
+swift:Core/Store+ext@Sources/Core/Store+Observation.swift#1	EXTENDS	swift:Core/Store	EXTRACTED
+swift:Core/Store+ext@Sources/Core/Store+Observation.swift#1	CONFORMS_TO	swift:Combine/ObservableObject	INFERRED
+swift:Core/Logging+ext@Sources/Core/Logger.swift#1	EXTENDS	swift:Core/Logging	EXTRACTED
+swift:App/AppView	CONFORMS_TO	swift:SwiftUI/View	INFERRED
+swift:App/MiniApp	CONFORMS_TO	swift:SwiftUI/App	INFERRED
+
+# Members satisfying requirements, overrides
+swift:Core/Item.title	IMPLEMENTS	swift:Core/Listable.title	INFERRED
+swift:Core/Item.summary(maxLength:)	IMPLEMENTS	swift:Core/Listable.summary(maxLength:)	INFERRED
+swift:Core/ConsoleLogger.log(_:)	IMPLEMENTS	swift:Core/Logging.log(_:)	INFERRED
+swift:Core/PrefixLogger.log(_:)	OVERRIDES	swift:Core/ConsoleLogger.log(_:)	EXTRACTED
+
+# Calls
+swift:Core/Store.send(_:)	CALLS	swift:Core/Store.reduce(_:)	INFERRED
+swift:Core/Store.send(_:)	CALLS	swift:Core/Logging.log(_:)	EXTRACTED
+swift:Core/Store.init(logger:)	INSTANTIATES	swift:Core/ConsoleLogger	INFERRED
+swift:Core/Store.init(logger:)	CALLS	swift:Core/ConsoleLogger.init()	INFERRED
+swift:Core/Store.preview()	CALLS	swift:Core/Store.send(_:)	INFERRED
+swift:Core/Store.preview()	INSTANTIATES	swift:Core/Item	INFERRED
+swift:Core/Store.preview()	CALLS	swift:Core/Item.init(title:status:)	INFERRED
+swift:Core/PrefixLogger.log(_:)	CALLS	swift:Core/ConsoleLogger.log(_:)	EXTRACTED
+swift:Core/PrefixLogger.init(prefix:)	CALLS	swift:Core/ConsoleLogger.init()	EXTRACTED
+swift:App/AppView.body	CALLS	swift:Core/Store.send(_:)	EXTRACTED
+swift:App/AppView.body	CALLS	swift:Core/formatTitle(_:)	INFERRED
+swift:App/AppView.body	INSTANTIATES	swift:App/ItemRow	INFERRED
+swift:App/MiniApp.body	INSTANTIATES	swift:App/AppView	INFERRED
+
+# Properties
+swift:Core/Store.reduce(_:)	READS	swift:Core/Store.items	INFERRED
+swift:Core/Store+ext@Sources/Core/Store+Observation.swift#1	CONTAINS	swift:Core/Store.count	EXTRACTED
+swift:Core/Store.count	READS	swift:Core/Store.items	INFERRED
+swift:Core/Store.items	WRAPS	swift:Combine/Published	INFERRED
+swift:App/MiniApp.store	WRAPS	swift:SwiftUI/StateObject	INFERRED
+
+# SwiftUI
+swift:App/AppView.body	RENDERS	swift:App/ItemRow	INFERRED
+swift:App/MiniApp.body	RENDERS	swift:App/AppView	INFERRED
+
+# Tests
+swift:AppTests/StoreTests.testSendAddsItem()	TESTS	swift:Core/Store.send(_:)	INFERRED
+swift:AppTests/previewHasOneItem()	TESTS	swift:Core/Store.preview()	INFERRED
+
+# Localization (phase GL)
+swift:App/AppView.emptyMessage	USES_STRING	l10n:App/Localizable/empty_message	EXTRACTED
+swift:App/AppView.body	USES_STRING	l10n:App/Localizable/items_title	INFERRED
+swift:App/AppView.body	USES_STRING	l10n:App/Localizable/add_button	INFERRED
+swift:App/AppView.countLabel(count:)	USES_STRING	l10n:App/Localizable/%lld items	EXTRACTED
+
+# absent: edges that must not exist
+absent	swift:App/ItemRow.body	USES_STRING	*
+absent	swift:Core/Store.send(_:)	CALLS	swift:Core/ConsoleLogger.log(_:)

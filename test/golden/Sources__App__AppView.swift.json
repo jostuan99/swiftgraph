@@ -1,0 +1,856 @@
+{
+  "version": 10,
+  "imports": [
+    "SwiftUI",
+    "Core"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "struct",
+      "name": "AppView",
+      "selector": "AppView",
+      "signature": "struct AppView: View",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        4,
+        1,
+        29,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "View"
+      ]
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "property",
+      "name": "store",
+      "selector": "store",
+      "signature": "var store: Store<Void>",
+      "access": null,
+      "modifiers": [],
+      "attributes": [
+        "ObservedObject"
+      ],
+      "range": [
+        5,
+        25,
+        5,
+        43
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "Store<Void>",
+      "isComputed": false
+    },
+    {
+      "localId": 2,
+      "parent": 0,
+      "kind": "property",
+      "name": "draft",
+      "selector": "draft",
+      "signature": "var draft",
+      "access": "private",
+      "modifiers": [
+        "private"
+      ],
+      "attributes": [
+        "State"
+      ],
+      "range": [
+        6,
+        24,
+        6,
+        34
+      ],
+      "doc": null,
+      "conditions": [],
+      "isComputed": false
+    },
+    {
+      "localId": 3,
+      "parent": 0,
+      "kind": "property",
+      "name": "body",
+      "selector": "body",
+      "signature": "var body: some View",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        8,
+        9,
+        20,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "some View",
+      "isComputed": true
+    },
+    {
+      "localId": 4,
+      "parent": 0,
+      "kind": "property",
+      "name": "emptyMessage",
+      "selector": "emptyMessage",
+      "signature": "var emptyMessage: String",
+      "access": "private",
+      "modifiers": [
+        "private"
+      ],
+      "attributes": [],
+      "range": [
+        22,
+        17,
+        24,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "String",
+      "isComputed": true
+    },
+    {
+      "localId": 5,
+      "parent": 0,
+      "kind": "function",
+      "name": "countLabel",
+      "selector": "countLabel(count:)",
+      "signature": "func countLabel(count: Int) -> String",
+      "access": "private",
+      "modifiers": [
+        "private"
+      ],
+      "attributes": [],
+      "range": [
+        26,
+        5,
+        28,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "count",
+          "name": "count",
+          "type": "Int"
+        }
+      ],
+      "returnType": "String"
+    }
+  ],
+  "references": [
+    {
+      "from": 0,
+      "kind": "inherit",
+      "name": "View",
+      "line": 4,
+      "column": 17
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "Store",
+      "line": 5,
+      "column": 32
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "Void",
+      "line": 5,
+      "column": 38
+    },
+    {
+      "from": 1,
+      "kind": "attribute",
+      "name": "ObservedObject",
+      "line": 5,
+      "column": 5
+    },
+    {
+      "from": 2,
+      "kind": "attribute",
+      "name": "State",
+      "line": 6,
+      "column": 5
+    },
+    {
+      "from": 3,
+      "kind": "type",
+      "name": "View",
+      "line": 8,
+      "column": 20
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "NavigationStack",
+      "line": 9,
+      "column": 9,
+      "selector": "NavigationStack(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "toolbar",
+      "line": 14,
+      "column": 14,
+      "selector": "toolbar(_:)",
+      "receiver": {
+        "kind": "expression"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "navigationTitle",
+      "line": 13,
+      "column": 14,
+      "selector": "navigationTitle(_:)",
+      "receiver": {
+        "kind": "instance",
+        "type": "List"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "string",
+      "name": "items_title",
+      "line": 13,
+      "column": 30,
+      "localization": "swiftui"
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "List",
+      "line": 10,
+      "column": 13,
+      "selector": "List(_:id:_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "read",
+      "name": "items",
+      "line": 10,
+      "column": 24,
+      "receiver": {
+        "kind": "self_member",
+        "name": "store"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "read",
+      "name": "store",
+      "line": 10,
+      "column": 18,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "ItemRow",
+      "line": 11,
+      "column": 17,
+      "selector": "ItemRow(item:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "Button",
+      "line": 15,
+      "column": 17,
+      "selector": "Button(_:_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "string",
+      "name": "add_button",
+      "line": 15,
+      "column": 24,
+      "localization": "swiftui"
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "send",
+      "line": 16,
+      "column": 27,
+      "selector": "send(_:)",
+      "receiver": {
+        "kind": "self_member",
+        "name": "store"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "read",
+      "name": "store",
+      "line": 16,
+      "column": 21,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "add",
+      "line": 16,
+      "column": 32,
+      "selector": "add(_:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "Item",
+      "line": 16,
+      "column": 37,
+      "selector": "Item(title:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "formatTitle",
+      "line": 16,
+      "column": 49,
+      "selector": "formatTitle(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 3,
+      "kind": "read",
+      "name": "draft",
+      "line": 16,
+      "column": 61,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 4,
+      "kind": "type",
+      "name": "String",
+      "line": 22,
+      "column": 31
+    },
+    {
+      "from": 4,
+      "kind": "call",
+      "name": "NSLocalizedString",
+      "line": 23,
+      "column": 9,
+      "selector": "NSLocalizedString(_:comment:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 4,
+      "kind": "string",
+      "name": "empty_message",
+      "line": 23,
+      "column": 27,
+      "localization": "explicit"
+    },
+    {
+      "from": 5,
+      "kind": "type",
+      "name": "Int",
+      "line": 26,
+      "column": 36
+    },
+    {
+      "from": 5,
+      "kind": "type",
+      "name": "String",
+      "line": 26,
+      "column": 44
+    },
+    {
+      "from": 5,
+      "kind": "call",
+      "name": "String",
+      "line": 27,
+      "column": 9,
+      "selector": "String(localized:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 5,
+      "kind": "string",
+      "name": "%lld items",
+      "line": 27,
+      "column": 27,
+      "localization": "explicit"
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 3,
+        "name": "NavigationStack",
+        "selector": "NavigationStack(_:)",
+        "reference": 6,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "closure",
+              "closure": 0
+            }
+          }
+        ],
+        "branch": [],
+        "line": 9,
+        "column": 9
+      },
+      {
+        "from": 3,
+        "name": "toolbar",
+        "selector": "toolbar(_:)",
+        "reference": 7,
+        "parent": null,
+        "closure": 0,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "closure",
+              "closure": 2
+            }
+          }
+        ],
+        "branch": [],
+        "line": 14,
+        "column": 14,
+        "receiver": {
+          "kind": "call",
+          "call": 2
+        }
+      },
+      {
+        "from": 3,
+        "name": "navigationTitle",
+        "selector": "navigationTitle(_:)",
+        "reference": 8,
+        "parent": 1,
+        "closure": 0,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "items_title"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 13,
+        "column": 14,
+        "receiver": {
+          "kind": "call",
+          "call": 3
+        }
+      },
+      {
+        "from": 3,
+        "name": "List",
+        "selector": "List(_:id:_:)",
+        "reference": 10,
+        "parent": 2,
+        "closure": 0,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "self"
+              },
+              "members": [
+                "store",
+                "items"
+              ]
+            }
+          },
+          {
+            "label": "id",
+            "value": {
+              "kind": "compound",
+              "text": "\\.id",
+              "operands": [
+                {
+                  "kind": "path",
+                  "root": {
+                    "kind": "self"
+                  },
+                  "members": [
+                    "id"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "label": "_",
+            "value": {
+              "kind": "closure",
+              "closure": 1
+            }
+          }
+        ],
+        "branch": [],
+        "line": 10,
+        "column": 13
+      },
+      {
+        "from": 3,
+        "name": "ItemRow",
+        "selector": "ItemRow(item:)",
+        "reference": 13,
+        "parent": null,
+        "closure": 1,
+        "arguments": [
+          {
+            "label": "item",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "local",
+                "name": "item",
+                "scope": 5
+              },
+              "members": []
+            }
+          }
+        ],
+        "branch": [],
+        "line": 11,
+        "column": 17
+      },
+      {
+        "from": 3,
+        "name": "Button",
+        "selector": "Button(_:_:)",
+        "reference": 14,
+        "parent": null,
+        "closure": 2,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "add_button"
+            }
+          },
+          {
+            "label": "_",
+            "value": {
+              "kind": "closure",
+              "closure": 3
+            }
+          }
+        ],
+        "branch": [],
+        "line": 15,
+        "column": 17
+      },
+      {
+        "from": 3,
+        "name": "send",
+        "selector": "send(_:)",
+        "reference": 16,
+        "parent": null,
+        "closure": 3,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "call",
+              "call": 7
+            }
+          }
+        ],
+        "branch": [],
+        "line": 16,
+        "column": 27,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "store"
+          ]
+        }
+      },
+      {
+        "from": 3,
+        "name": "add",
+        "selector": "add(_:)",
+        "reference": 18,
+        "parent": 6,
+        "closure": 3,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "call",
+              "call": 8
+            }
+          }
+        ],
+        "branch": [],
+        "line": 16,
+        "column": 32
+      },
+      {
+        "from": 3,
+        "name": "Item",
+        "selector": "Item(title:)",
+        "reference": 19,
+        "parent": 7,
+        "closure": 3,
+        "arguments": [
+          {
+            "label": "title",
+            "value": {
+              "kind": "call",
+              "call": 9
+            }
+          }
+        ],
+        "branch": [],
+        "line": 16,
+        "column": 37
+      },
+      {
+        "from": 3,
+        "name": "formatTitle",
+        "selector": "formatTitle(_:)",
+        "reference": 20,
+        "parent": 8,
+        "closure": 3,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "self"
+              },
+              "members": [
+                "draft"
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 16,
+        "column": 49
+      },
+      {
+        "from": 4,
+        "name": "NSLocalizedString",
+        "selector": "NSLocalizedString(_:comment:)",
+        "reference": 23,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "empty_message"
+            }
+          },
+          {
+            "label": "comment",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "Shown when the list is empty"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 23,
+        "column": 9
+      },
+      {
+        "from": 5,
+        "name": "String",
+        "selector": "String(localized:)",
+        "reference": 27,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "localized",
+            "value": {
+              "kind": "compound",
+              "text": "\"\\(count) items\"",
+              "operands": [
+                {
+                  "kind": "path",
+                  "root": {
+                    "kind": "local",
+                    "name": "count",
+                    "scope": 9
+                  },
+                  "members": []
+                }
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 27,
+        "column": 9
+      }
+    ],
+    "closures": [
+      {
+        "scope": 4,
+        "call": 0,
+        "parent": null,
+        "parameters": [],
+        "returns": [
+          {
+            "kind": "call",
+            "call": 1
+          }
+        ]
+      },
+      {
+        "scope": 5,
+        "call": 3,
+        "parent": 0,
+        "parameters": [
+          "item"
+        ],
+        "returns": [
+          {
+            "kind": "call",
+            "call": 4
+          }
+        ]
+      },
+      {
+        "scope": 6,
+        "call": 1,
+        "parent": 0,
+        "parameters": [],
+        "returns": [
+          {
+            "kind": "call",
+            "call": 5
+          }
+        ]
+      },
+      {
+        "scope": 7,
+        "call": 5,
+        "parent": 2,
+        "parameters": [],
+        "returns": [
+          {
+            "kind": "call",
+            "call": 6
+          }
+        ]
+      }
+    ],
+    "assignments": [
+      {
+        "from": 2,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "draft"
+          ]
+        },
+        "value": {
+          "kind": "literal",
+          "type": "String",
+          "value": ""
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 6
+      }
+    ],
+    "bindings": [],
+    "returns": [
+      {
+        "from": 3,
+        "value": {
+          "kind": "call",
+          "call": 0
+        },
+        "line": 9
+      },
+      {
+        "from": 4,
+        "value": {
+          "kind": "call",
+          "call": 10
+        },
+        "line": 23
+      },
+      {
+        "from": 5,
+        "value": {
+          "kind": "call",
+          "call": 11
+        },
+        "line": 27
+      }
+    ]
+  },
+  "hasErrors": false
+}

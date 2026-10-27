@@ -1,0 +1,40 @@
+ProductListViewController  [UIViewController, layer View]  Sources/CleanApp/Presentation/ProductListViewController.swift:4
+
+ProductListViewController/F1  action  ProductListViewController#4 refreshButton tap → didTapRefresh()  ProductListViewController.swift:27
+ 1 [View]          ProductListViewController.didTapRefresh()                                                                     ProductListViewController.swift:49
+ 2 [ViewModel]       ProductListViewModel.reload()                                                                               ProductListViewModel.swift:26
+                       writes
+                         ProductListViewModel.errorMessage ← nil  → #3
+ 3 [Repository]        ProductRepositoryImpl.products()  (DI: ProductRepository → ProductRepositoryImpl  AppContainer.swift:13)  ProductRepository.swift:14
+ 4 [Service]             ProductServiceImpl.fetchProducts()  (DI: ProductService → ProductServiceImpl  AppContainer.swift:10)    ProductService.swift:14
+ 5 [keychain]              read "accessToken"                                                                                    ProductService.swift:15
+ 6 [api]                   GET https://api.example.com/v1/products → ProductListResponse                                         ProductService.swift:17
+                             success
+                               ProductListViewModel.title ← title  → #1
+                               ProductListViewModel.rows ← items  (map → [ProductRowViewData])  → #5, ProductCell#1, ProductCell#2
+                                   .name ← items[].product_name
+                                   .price ← items[].price  (formatted)
+                               ProductListViewModel.lastUpdated ← Date()  → #2
+                             failure
+                               catch let error as AFError → ProductListViewModel.errorMessage ← error GET https://api.example.com/v1/products  → #3
+                               catch → ProductListViewModel.rows ← []  → #5, ProductCell#1, ProductCell#2
+                               catch → ProductListViewModel.errorMessage ← error GET https://api.example.com/v1/products  → #3
+ 7 [Storage]           SettingsStore.markUpdated(_:)                                                                             SettingsStore.swift:10
+ 8 [userDefaults]        write "lastUpdated"  (UserDefaults.set)                                                                 SettingsStore.swift:11
+
+ProductListViewController/F2  lifecycle  ProductListViewController.viewDidLoad()  ProductListViewController.swift:22
+ 1 [View]          ProductListViewController.viewDidLoad()                            ProductListViewController.swift:22
+ 2 [localization]    read "refresh"                                                   ProductListViewController.swift:26
+ 3 [View]            viewModel.$title.sink  async (after the publisher emits)         ProductListViewController.swift:29
+                       writes
+                         titleLabel.text ← ProductListViewModel.title
+ 4 [View]            viewModel.$lastUpdated.sink  async (after the publisher emits)   ProductListViewController.swift:34
+                       writes
+                         let date → lastUpdatedLabel.text ← userDefaults "lastUpdated" | ProductListViewModel.lastUpdated
+                         lastUpdatedLabel.isHidden ← ProductListViewModel.lastUpdated
+ 5 [View]            viewModel.$errorMessage.sink  async (after the publisher emits)  ProductListViewController.swift:42
+                       writes
+                         errorLabel.text ← ProductListViewModel.errorMessage
+                         errorLabel.isHidden ← ProductListViewModel.errorMessage
+
+More: --steps

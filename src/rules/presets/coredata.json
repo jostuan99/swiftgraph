@@ -1,0 +1,28 @@
+{
+  "name": "coredata",
+  "description": "Core Data: fetch requests and @FetchRequest",
+  "whenImports": ["CoreData"],
+  "sources": [
+    {
+      "id": "coredata.fetch",
+      "kind": "local.coreData",
+      "call": "NSManagedObjectContext.fetch(_:)"
+    },
+    {
+      "id": "coredata.fetch-request",
+      "kind": "local.coreData",
+      "attribute": "FetchRequest"
+    },
+    {
+      "id": "coredata.sectioned-fetch-request",
+      "kind": "local.coreData",
+      "attribute": "SectionedFetchRequest"
+    },
+    {
+      "id": "coredata.save",
+      "kind": "local.coreData",
+      "call": "NSManagedObjectContext.save()",
+      "direction": "write"
+    }
+  ]
+}

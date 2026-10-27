@@ -1,0 +1,828 @@
+{
+  "version": 10,
+  "imports": [
+    "Foundation"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "enum",
+      "name": "Action",
+      "selector": "Action",
+      "signature": "enum Action",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        3,
+        1,
+        6,
+        2
+      ],
+      "doc": null,
+      "conditions": []
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "enum_case",
+      "name": "add",
+      "selector": "add",
+      "signature": "case add(Item)",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        4,
+        10,
+        4,
+        19
+      ],
+      "doc": null,
+      "conditions": []
+    },
+    {
+      "localId": 2,
+      "parent": 0,
+      "kind": "enum_case",
+      "name": "remove",
+      "selector": "remove",
+      "signature": "case remove(id: UUID)",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        5,
+        10,
+        5,
+        26
+      ],
+      "doc": null,
+      "conditions": []
+    },
+    {
+      "localId": 3,
+      "parent": null,
+      "kind": "class",
+      "name": "Store",
+      "selector": "Store",
+      "signature": "class Store<State>",
+      "access": "public",
+      "modifiers": [
+        "public",
+        "final"
+      ],
+      "attributes": [],
+      "range": [
+        9,
+        1,
+        36,
+        2
+      ],
+      "doc": "Holds the items and applies actions to them.",
+      "conditions": [],
+      "genericParameters": [
+        "State"
+      ]
+    },
+    {
+      "localId": 4,
+      "parent": 3,
+      "kind": "property",
+      "name": "items",
+      "selector": "items",
+      "signature": "var items: [Item]",
+      "access": "public",
+      "modifiers": [
+        "public",
+        "private(set)"
+      ],
+      "attributes": [
+        "Published"
+      ],
+      "range": [
+        10,
+        40,
+        10,
+        58
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "[Item]",
+      "isComputed": false
+    },
+    {
+      "localId": 5,
+      "parent": 3,
+      "kind": "property",
+      "name": "logger",
+      "selector": "logger",
+      "signature": "let logger: Logging",
+      "access": "private",
+      "modifiers": [
+        "private"
+      ],
+      "attributes": [],
+      "range": [
+        11,
+        17,
+        11,
+        32
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "Logging",
+      "isComputed": false
+    },
+    {
+      "localId": 6,
+      "parent": 3,
+      "kind": "initializer",
+      "name": "init",
+      "selector": "init(logger:)",
+      "signature": "init(logger: Logging = ConsoleLogger())",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        13,
+        5,
+        15,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "logger",
+          "name": "logger",
+          "type": "Logging",
+          "hasDefault": true
+        }
+      ]
+    },
+    {
+      "localId": 7,
+      "parent": 3,
+      "kind": "function",
+      "name": "send",
+      "selector": "send(_:)",
+      "signature": "func send(_ action: Action)",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        17,
+        5,
+        20,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "action",
+          "type": "Action"
+        }
+      ]
+    },
+    {
+      "localId": 8,
+      "parent": 3,
+      "kind": "function",
+      "name": "reduce",
+      "selector": "reduce(_:)",
+      "signature": "func reduce(_ action: Action)",
+      "access": "private",
+      "modifiers": [
+        "private"
+      ],
+      "attributes": [],
+      "range": [
+        22,
+        5,
+        29,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "action",
+          "type": "Action"
+        }
+      ]
+    },
+    {
+      "localId": 9,
+      "parent": 3,
+      "kind": "function",
+      "name": "preview",
+      "selector": "preview()",
+      "signature": "func preview() -> Store<State>",
+      "access": "public",
+      "modifiers": [
+        "public",
+        "static"
+      ],
+      "attributes": [],
+      "range": [
+        31,
+        5,
+        35,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "isStatic": true,
+      "parameters": [],
+      "returnType": "Store<State>"
+    }
+  ],
+  "references": [
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "Item",
+      "line": 4,
+      "column": 14
+    },
+    {
+      "from": 2,
+      "kind": "type",
+      "name": "UUID",
+      "line": 5,
+      "column": 21
+    },
+    {
+      "from": 4,
+      "kind": "type",
+      "name": "Item",
+      "line": 10,
+      "column": 48
+    },
+    {
+      "from": 4,
+      "kind": "attribute",
+      "name": "Published",
+      "line": 10,
+      "column": 5
+    },
+    {
+      "from": 5,
+      "kind": "type",
+      "name": "Logging",
+      "line": 11,
+      "column": 25
+    },
+    {
+      "from": 6,
+      "kind": "type",
+      "name": "Logging",
+      "line": 13,
+      "column": 25
+    },
+    {
+      "from": 6,
+      "kind": "call",
+      "name": "ConsoleLogger",
+      "line": 13,
+      "column": 35,
+      "selector": "ConsoleLogger()",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 6,
+      "kind": "write",
+      "name": "logger",
+      "line": 14,
+      "column": 14,
+      "receiver": {
+        "kind": "self"
+      }
+    },
+    {
+      "from": 7,
+      "kind": "type",
+      "name": "Action",
+      "line": 17,
+      "column": 32
+    },
+    {
+      "from": 7,
+      "kind": "call",
+      "name": "log",
+      "line": 18,
+      "column": 16,
+      "selector": "log(_:)",
+      "receiver": {
+        "kind": "self_member",
+        "name": "logger"
+      }
+    },
+    {
+      "from": 7,
+      "kind": "read",
+      "name": "logger",
+      "line": 18,
+      "column": 9,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 7,
+      "kind": "call",
+      "name": "reduce",
+      "line": 19,
+      "column": 9,
+      "selector": "reduce(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "type",
+      "name": "Action",
+      "line": 22,
+      "column": 35
+    },
+    {
+      "from": 8,
+      "kind": "call",
+      "name": "append",
+      "line": 25,
+      "column": 19,
+      "selector": "append(_:)",
+      "receiver": {
+        "kind": "self_member",
+        "name": "items"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "read",
+      "name": "items",
+      "line": 25,
+      "column": 13,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "call",
+      "name": "removeAll",
+      "line": 27,
+      "column": 19,
+      "selector": "removeAll(_:)",
+      "receiver": {
+        "kind": "self_member",
+        "name": "items"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "read",
+      "name": "items",
+      "line": 27,
+      "column": 13,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "read",
+      "name": "id",
+      "line": 27,
+      "column": 34,
+      "receiver": {
+        "kind": "variable",
+        "name": "$0"
+      }
+    },
+    {
+      "from": 9,
+      "kind": "type",
+      "name": "Store",
+      "line": 31,
+      "column": 37
+    },
+    {
+      "from": 9,
+      "kind": "type",
+      "name": "State",
+      "line": 31,
+      "column": 43
+    },
+    {
+      "from": 9,
+      "kind": "call",
+      "name": "Store",
+      "line": 32,
+      "column": 21,
+      "selector": "Store()",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 9,
+      "kind": "type",
+      "name": "State",
+      "line": 32,
+      "column": 27
+    },
+    {
+      "from": 9,
+      "kind": "call",
+      "name": "send",
+      "line": 33,
+      "column": 15,
+      "selector": "send(_:)",
+      "receiver": {
+        "kind": "variable",
+        "name": "store",
+        "typeHint": "Store",
+        "explicit": false
+      }
+    },
+    {
+      "from": 9,
+      "kind": "call",
+      "name": "add",
+      "line": 33,
+      "column": 20,
+      "selector": "add(_:)",
+      "receiver": {
+        "kind": "implicit"
+      }
+    },
+    {
+      "from": 9,
+      "kind": "call",
+      "name": "Item",
+      "line": 33,
+      "column": 25,
+      "selector": "Item(title:)",
+      "receiver": {
+        "kind": "none"
+      }
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 6,
+        "name": "ConsoleLogger",
+        "selector": "ConsoleLogger()",
+        "reference": 6,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 13,
+        "column": 35
+      },
+      {
+        "from": 7,
+        "name": "log",
+        "selector": "log(_:)",
+        "reference": 9,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "compound",
+              "text": "\"send \\(action)\"",
+              "operands": [
+                {
+                  "kind": "path",
+                  "root": {
+                    "kind": "local",
+                    "name": "action",
+                    "scope": 4
+                  },
+                  "members": []
+                }
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 18,
+        "column": 16,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "logger"
+          ]
+        }
+      },
+      {
+        "from": 7,
+        "name": "reduce",
+        "selector": "reduce(_:)",
+        "reference": 11,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "local",
+                "name": "action",
+                "scope": 4
+              },
+              "members": []
+            }
+          }
+        ],
+        "branch": [],
+        "line": 19,
+        "column": 9
+      },
+      {
+        "from": 8,
+        "name": "append",
+        "selector": "append(_:)",
+        "reference": 13,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "local",
+                "name": "item",
+                "scope": 5
+              },
+              "members": []
+            }
+          }
+        ],
+        "branch": [
+          "action ~ .add(let item)"
+        ],
+        "line": 25,
+        "column": 19,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "items"
+          ]
+        }
+      },
+      {
+        "from": 8,
+        "name": "removeAll",
+        "selector": "removeAll(_:)",
+        "reference": 15,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "closure",
+              "closure": 0
+            }
+          }
+        ],
+        "branch": [
+          "action ~ .remove(let id)"
+        ],
+        "line": 27,
+        "column": 19,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "items"
+          ]
+        }
+      },
+      {
+        "from": 9,
+        "name": "Store",
+        "selector": "Store()",
+        "reference": 20,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 32,
+        "column": 21
+      },
+      {
+        "from": 9,
+        "name": "send",
+        "selector": "send(_:)",
+        "reference": 22,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "call",
+              "call": 7
+            }
+          }
+        ],
+        "branch": [],
+        "line": 33,
+        "column": 15,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "store",
+            "scope": 7
+          },
+          "members": []
+        }
+      },
+      {
+        "from": 9,
+        "name": "add",
+        "selector": "add(_:)",
+        "reference": 23,
+        "parent": 6,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "call",
+              "call": 8
+            }
+          }
+        ],
+        "branch": [],
+        "line": 33,
+        "column": 20
+      },
+      {
+        "from": 9,
+        "name": "Item",
+        "selector": "Item(title:)",
+        "reference": 24,
+        "parent": 7,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "title",
+            "value": {
+              "kind": "literal",
+              "type": "String",
+              "value": "Preview"
+            }
+          }
+        ],
+        "branch": [],
+        "line": 33,
+        "column": 25
+      }
+    ],
+    "closures": [
+      {
+        "scope": 6,
+        "call": 4,
+        "parent": null,
+        "parameters": [
+          "$0"
+        ],
+        "returns": [
+          {
+            "kind": "compound",
+            "text": "$0.id == id",
+            "operands": [
+              {
+                "kind": "path",
+                "root": {
+                  "kind": "local",
+                  "name": "$0",
+                  "scope": 6
+                },
+                "members": [
+                  "id"
+                ]
+              },
+              {
+                "kind": "path",
+                "root": {
+                  "kind": "local",
+                  "name": "id",
+                  "scope": 6
+                },
+                "members": []
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "assignments": [
+      {
+        "from": 4,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "items"
+          ]
+        },
+        "value": {
+          "kind": "compound",
+          "text": "[]",
+          "operands": []
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 10
+      },
+      {
+        "from": 6,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "logger"
+          ]
+        },
+        "value": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "logger",
+            "scope": 3
+          },
+          "members": []
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 14
+      }
+    ],
+    "bindings": [
+      {
+        "from": 9,
+        "scope": 7,
+        "name": "store",
+        "value": {
+          "kind": "call",
+          "call": 5
+        },
+        "line": 32
+      }
+    ],
+    "returns": [
+      {
+        "from": 9,
+        "value": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "store",
+            "scope": 7
+          },
+          "members": []
+        },
+        "line": 34
+      }
+    ]
+  },
+  "hasErrors": false
+}

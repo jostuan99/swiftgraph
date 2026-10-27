@@ -1,0 +1,651 @@
+{
+  "version": 10,
+  "imports": [
+    "Foundation"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "protocol",
+      "name": "Listable",
+      "selector": "Listable",
+      "signature": "protocol Listable",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        4,
+        1,
+        7,
+        2
+      ],
+      "doc": "Something that can be shown in a list.",
+      "conditions": []
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "property",
+      "name": "title",
+      "selector": "title",
+      "signature": "var title: String",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        5,
+        9,
+        5,
+        30
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "String",
+      "isComputed": true
+    },
+    {
+      "localId": 2,
+      "parent": 0,
+      "kind": "function",
+      "name": "summary",
+      "selector": "summary(maxLength:)",
+      "signature": "func summary(maxLength: Int) -> String",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        6,
+        5,
+        6,
+        43
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "maxLength",
+          "name": "maxLength",
+          "type": "Int"
+        }
+      ],
+      "returnType": "String"
+    },
+    {
+      "localId": 3,
+      "parent": null,
+      "kind": "struct",
+      "name": "Item",
+      "selector": "Item",
+      "signature": "struct Item: Listable, Hashable",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        9,
+        1,
+        23,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "Listable",
+        "Hashable"
+      ]
+    },
+    {
+      "localId": 4,
+      "parent": 3,
+      "kind": "property",
+      "name": "id",
+      "selector": "id",
+      "signature": "let id: UUID",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        10,
+        16,
+        10,
+        24
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "UUID",
+      "isComputed": false
+    },
+    {
+      "localId": 5,
+      "parent": 3,
+      "kind": "property",
+      "name": "title",
+      "selector": "title",
+      "signature": "var title: String",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        11,
+        16,
+        11,
+        29
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "String",
+      "isComputed": false
+    },
+    {
+      "localId": 6,
+      "parent": 3,
+      "kind": "property",
+      "name": "status",
+      "selector": "status",
+      "signature": "var status: Status",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        12,
+        16,
+        12,
+        30
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "Status",
+      "isComputed": false
+    },
+    {
+      "localId": 7,
+      "parent": 3,
+      "kind": "initializer",
+      "name": "init",
+      "selector": "init(title:status:)",
+      "signature": "init(title: String, status: Status = .draft)",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        14,
+        5,
+        18,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "title",
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "label": "status",
+          "name": "status",
+          "type": "Status",
+          "hasDefault": true
+        }
+      ]
+    },
+    {
+      "localId": 8,
+      "parent": 3,
+      "kind": "function",
+      "name": "summary",
+      "selector": "summary(maxLength:)",
+      "signature": "func summary(maxLength: Int) -> String",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        20,
+        5,
+        22,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "maxLength",
+          "name": "maxLength",
+          "type": "Int"
+        }
+      ],
+      "returnType": "String"
+    },
+    {
+      "localId": 9,
+      "parent": null,
+      "kind": "enum",
+      "name": "Status",
+      "selector": "Status",
+      "signature": "enum Status: String, CaseIterable",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        25,
+        1,
+        28,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "String",
+        "CaseIterable"
+      ]
+    },
+    {
+      "localId": 10,
+      "parent": 9,
+      "kind": "enum_case",
+      "name": "draft",
+      "selector": "draft",
+      "signature": "case draft",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        26,
+        10,
+        26,
+        15
+      ],
+      "doc": null,
+      "conditions": []
+    },
+    {
+      "localId": 11,
+      "parent": 9,
+      "kind": "enum_case",
+      "name": "published",
+      "selector": "published",
+      "signature": "case published",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        27,
+        10,
+        27,
+        19
+      ],
+      "doc": null,
+      "conditions": []
+    },
+    {
+      "localId": 12,
+      "parent": 9,
+      "kind": "enum_case",
+      "name": "archived",
+      "selector": "archived",
+      "signature": "case archived",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        27,
+        21,
+        27,
+        29
+      ],
+      "doc": null,
+      "conditions": []
+    }
+  ],
+  "references": [
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "String",
+      "line": 5,
+      "column": 16
+    },
+    {
+      "from": 2,
+      "kind": "type",
+      "name": "Int",
+      "line": 6,
+      "column": 29
+    },
+    {
+      "from": 2,
+      "kind": "type",
+      "name": "String",
+      "line": 6,
+      "column": 37
+    },
+    {
+      "from": 3,
+      "kind": "inherit",
+      "name": "Listable",
+      "line": 9,
+      "column": 21
+    },
+    {
+      "from": 3,
+      "kind": "inherit",
+      "name": "Hashable",
+      "line": 9,
+      "column": 31
+    },
+    {
+      "from": 4,
+      "kind": "type",
+      "name": "UUID",
+      "line": 10,
+      "column": 20
+    },
+    {
+      "from": 5,
+      "kind": "type",
+      "name": "String",
+      "line": 11,
+      "column": 23
+    },
+    {
+      "from": 6,
+      "kind": "type",
+      "name": "Status",
+      "line": 12,
+      "column": 24
+    },
+    {
+      "from": 7,
+      "kind": "type",
+      "name": "String",
+      "line": 14,
+      "column": 24
+    },
+    {
+      "from": 7,
+      "kind": "type",
+      "name": "Status",
+      "line": 14,
+      "column": 40
+    },
+    {
+      "from": 7,
+      "kind": "write",
+      "name": "id",
+      "line": 15,
+      "column": 14,
+      "receiver": {
+        "kind": "self"
+      }
+    },
+    {
+      "from": 7,
+      "kind": "call",
+      "name": "UUID",
+      "line": 15,
+      "column": 19,
+      "selector": "UUID()",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 7,
+      "kind": "write",
+      "name": "title",
+      "line": 16,
+      "column": 14,
+      "receiver": {
+        "kind": "self"
+      }
+    },
+    {
+      "from": 7,
+      "kind": "write",
+      "name": "status",
+      "line": 17,
+      "column": 14,
+      "receiver": {
+        "kind": "self"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "type",
+      "name": "Int",
+      "line": 20,
+      "column": 36
+    },
+    {
+      "from": 8,
+      "kind": "type",
+      "name": "String",
+      "line": 20,
+      "column": 44
+    },
+    {
+      "from": 8,
+      "kind": "call",
+      "name": "String",
+      "line": 21,
+      "column": 9,
+      "selector": "String(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "call",
+      "name": "prefix",
+      "line": 21,
+      "column": 22,
+      "selector": "prefix(_:)",
+      "receiver": {
+        "kind": "self_member",
+        "name": "title"
+      }
+    },
+    {
+      "from": 8,
+      "kind": "read",
+      "name": "title",
+      "line": 21,
+      "column": 16,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 9,
+      "kind": "inherit",
+      "name": "String",
+      "line": 25,
+      "column": 21
+    },
+    {
+      "from": 9,
+      "kind": "inherit",
+      "name": "CaseIterable",
+      "line": 25,
+      "column": 29
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 7,
+        "name": "UUID",
+        "selector": "UUID()",
+        "reference": 11,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 15,
+        "column": 19
+      },
+      {
+        "from": 8,
+        "name": "String",
+        "selector": "String(_:)",
+        "reference": 16,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "call",
+              "call": 2
+            }
+          }
+        ],
+        "branch": [],
+        "line": 21,
+        "column": 9
+      },
+      {
+        "from": 8,
+        "name": "prefix",
+        "selector": "prefix(_:)",
+        "reference": 17,
+        "parent": 1,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "local",
+                "name": "maxLength",
+                "scope": 7
+              },
+              "members": []
+            }
+          }
+        ],
+        "branch": [],
+        "line": 21,
+        "column": 22,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "title"
+          ]
+        }
+      }
+    ],
+    "closures": [],
+    "assignments": [
+      {
+        "from": 7,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "id"
+          ]
+        },
+        "value": {
+          "kind": "call",
+          "call": 0
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 15
+      },
+      {
+        "from": 7,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "title"
+          ]
+        },
+        "value": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "title",
+            "scope": 6
+          },
+          "members": []
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 16
+      },
+      {
+        "from": 7,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "status"
+          ]
+        },
+        "value": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "status",
+            "scope": 6
+          },
+          "members": []
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 17
+      }
+    ],
+    "bindings": [],
+    "returns": [
+      {
+        "from": 1,
+        "value": {
+          "kind": "compound",
+          "text": "get",
+          "operands": []
+        },
+        "line": 5
+      },
+      {
+        "from": 8,
+        "value": {
+          "kind": "call",
+          "call": 1
+        },
+        "line": 21
+      }
+    ]
+  },
+  "hasErrors": false
+}

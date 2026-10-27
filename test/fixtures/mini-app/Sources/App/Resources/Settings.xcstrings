@@ -1,0 +1,26 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "settings_title" : {
+      "comment" : "Title of the settings screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } },
+        "vi" : { "stringUnit" : { "state" : "needs_review", "value" : "Cài đặt" } }
+      }
+    },
+    "%lld devices" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld device" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld devices" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

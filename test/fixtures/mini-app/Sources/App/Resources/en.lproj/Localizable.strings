@@ -1,0 +1,8 @@
+/* Title of the item list */
+"items_title" = "Items";
+
+/* Button that adds an item */
+"add_button" = "Add";
+
+"empty_message" = "No items yet";
+"unused_key" = "Never shown";

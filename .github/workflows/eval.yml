@@ -1,0 +1,96 @@
+name: Eval
+
+# Evaluation on the reference repositories of eval/repos.txt:
+# - bench: token benchmark and answers to bench/questions.ts (SG5), on every change;
+# - indexstore: call precision against the compiler's index store (SG4), on
+#   demand and weekly, because it needs the Xcode version that matches the
+#   indexstore-db revision pinned in eval/indexstore-calls (Swift 6.4).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
+
+jobs:
+  bench:
+    name: Token benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: swiftgraph
+
+      - uses: actions/checkout@v4
+        with:
+          repository: JosSteve/tree-sitter-swift
+          path: tree-sitter-swift
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build the grammar
+        working-directory: tree-sitter-swift
+        run: npm ci
+
+      - name: Install dependencies
+        working-directory: swiftgraph
+        run: npm ci
+
+      - name: Cache reference repositories
+        uses: actions/cache@v4
+        with:
+          path: swiftgraph/eval/repos
+          key: eval-repos-${{ hashFiles('swiftgraph/eval/repos.txt') }}
+
+      # 13/15 and 42x on 2026-10-27; two answers need a type checker (docs/02-plan.md, G6).
+      - name: Benchmark
+        working-directory: swiftgraph
+        run: eval/run-bench.sh --min-correct 13 --min-ratio 5
+
+  indexstore:
+    name: Index store comparison
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: swiftgraph
+
+      - uses: actions/checkout@v4
+        with:
+          repository: JosSteve/tree-sitter-swift
+          path: tree-sitter-swift
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check the Swift version
+        id: swift
+        run: |
+          swift --version
+          if swift --version 2>&1 | grep -q 'Swift version 6\.4'; then
+            echo "match=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Skipped: indexstore-db in eval/indexstore-calls is pinned to Swift 6.4."
+            echo "match=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the grammar
+        if: steps.swift.outputs.match == 'true'
+        working-directory: tree-sitter-swift
+        run: npm ci
+
+      - name: Install dependencies
+        if: steps.swift.outputs.match == 'true'
+        working-directory: swiftgraph
+        run: npm ci
+
+      - name: Compare with the index store
+        if: steps.swift.outputs.match == 'true'
+        working-directory: swiftgraph
+        run: eval/run-indexstore.sh swift-argument-parser --min-precision 95

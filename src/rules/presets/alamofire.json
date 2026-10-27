@@ -1,0 +1,79 @@
+{
+  "name": "alamofire",
+  "description": "Alamofire responses decoded into types",
+  "whenImports": ["Alamofire"],
+  "sources": [
+    {
+      "id": "alamofire.serializing-decodable",
+      "kind": "api",
+      "call": "*.serializingDecodable(_:automaticallyCancelling:dataPreprocessor:decoder:emptyResponseCodes:emptyRequestMethods:)",
+      "type": 0,
+      "unwrap": ["value", "result", "response"],
+      "endpoint": {
+        "call": "*.request",
+        "argument": 0,
+        "method": "method",
+        "defaultMethod": "GET"
+      }
+    },
+    {
+      "id": "alamofire.response-decodable",
+      "kind": "api",
+      "call": "*.responseDecodable(of:queue:dataPreprocessor:decoder:emptyResponseCodes:emptyRequestMethods:completionHandler:)",
+      "type": "of",
+      "yields": "closure:completionHandler",
+      "unwrap": ["value", "result"],
+      "endpoint": {
+        "call": "*.request",
+        "argument": 0,
+        "method": "method",
+        "defaultMethod": "GET"
+      }
+    },
+    {
+      "id": "alamofire.publish-decodable",
+      "kind": "api",
+      "call": "*.publishDecodable(type:queue:preprocessor:decoder:emptyResponseCodes:emptyRequestMethods:)",
+      "type": "type",
+      "yields": "elements",
+      "unwrap": ["value", "result"],
+      "endpoint": {
+        "call": "*.request",
+        "argument": 0,
+        "method": "method",
+        "defaultMethod": "GET"
+      }
+    },
+    {
+      "id": "alamofire.serializing-data",
+      "kind": "api",
+      "call": "*.serializingData(automaticallyCancelling:dataPreprocessor:emptyResponseCodes:emptyRequestMethods:)",
+      "type": {
+        "fixed": "Data"
+      },
+      "unwrap": ["value", "result", "response"],
+      "endpoint": {
+        "call": "*.request",
+        "argument": 0,
+        "method": "method",
+        "defaultMethod": "GET"
+      }
+    },
+    {
+      "id": "alamofire.response-data",
+      "kind": "api",
+      "call": "*.responseData(queue:dataPreprocessor:emptyResponseCodes:emptyRequestMethods:completionHandler:)",
+      "type": {
+        "fixed": "Data"
+      },
+      "yields": "closure:completionHandler",
+      "unwrap": ["value", "result", "data"],
+      "endpoint": {
+        "call": "*.request",
+        "argument": 0,
+        "method": "method",
+        "defaultMethod": "GET"
+      }
+    }
+  ]
+}

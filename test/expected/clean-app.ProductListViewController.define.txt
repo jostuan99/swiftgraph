@@ -1,0 +1,23 @@
+ProductListViewController  [UIViewController, layer View]  Sources/CleanApp/Presentation/ProductListViewController.swift:4
+  state:     viewModel: ProductListViewModel  ProductListViewController.swift:5
+  children:  ProductCell (cell of ProductListViewController#5, ProductListViewController.swift:24)
+
+ITEMS (7)
+ id                                               line                                kind         dir      when                        datasource
+ ProductListViewController#1                      ProductListViewController.swift:30  UILabel      display                              GET https://api.example.com/v1/products title
+ ProductListViewController#2                      ProductListViewController.swift:36  UILabel      display  let date && !(date == nil)  userDefaults "lastUpdated"
+ ProductListViewController#3                      ProductListViewController.swift:43  UILabel      display  !(message == nil)           error GET https://api.example.com/v1/products
+ ProductListViewController#4                      ProductListViewController.swift:26  UIButton     action                               localization "refresh"
+ ProductListViewController#5                      ProductListViewController.swift:57  UITableView  list                                 GET https://api.example.com/v1/products items
+ ProductCell#1  (in ProductListViewController#5)  ProductListViewController.swift:72  UILabel      display                              GET https://api.example.com/v1/products items[].product_name
+ ProductCell#2  (in ProductListViewController#5)  ProductListViewController.swift:73  UILabel      display                              GET https://api.example.com/v1/products items[].price
+
+SUMMARY
+ api           GET "https://api.example.com/v1/products" → serializingDecodable → ProductListResponse  .title: String "title", .items: [ProductDTO] "items", .items[].name: String "product_name", .items[].price: Decimal "price"
+ local         "lastUpdated"  UserDefaults.object → Any?
+ file          JSONDecoder.decode → [ProductDTO]  [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")"  Data(contentsOf:) → Data
+ error         GET https://api.example.com/v1/products
+ localization  Localizable: 1 key
+ unresolved    none
+
+More: --detail (DATA, CONDITIONS) or --item <id>

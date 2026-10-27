@@ -1,0 +1,10 @@
+# Expected localization issues of test/fixtures/mini-app (phase GL).
+# Columns: kind <TAB> table <TAB> key <TAB> language
+unused_key	Localizable	unused_key	-
+unused_key	Settings	%lld devices	-
+missing_translation	Localizable	empty_message	vi
+missing_translation	Localizable	unused_key	vi
+format_mismatch	Localizable	add_button	vi
+needs_review	Settings	settings_title	vi
+missing_translation	Settings	%lld devices	vi
+missing_translation	Localizable	%lld items	vi

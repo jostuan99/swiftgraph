@@ -1,0 +1,172 @@
+{
+  "name": "combine",
+  "description": "Combine: values emitted by publishers, operators, sink and assign",
+  "whenImports": ["Combine"],
+  "flowThrough": [
+    {
+      "id": "combine.just",
+      "call": "Just(_:)",
+      "elements": "argument:0"
+    },
+    {
+      "id": "combine.map",
+      "call": "*.map(_:)",
+      "elements": "closure:0",
+      "closures": {
+        "0": {
+          "parameters": ["receiver[]"]
+        }
+      },
+      "derivedFrom": "receiver"
+    },
+    {
+      "id": "combine.try-map",
+      "call": "*.tryMap(_:)",
+      "elements": "closure:0",
+      "closures": {
+        "0": {
+          "parameters": ["receiver[]"]
+        }
+      },
+      "derivedFrom": "receiver"
+    },
+    {
+      "id": "combine.compact-map",
+      "call": "*.compactMap(_:)",
+      "elements": "closure:0",
+      "closures": {
+        "0": {
+          "parameters": ["receiver[]"]
+        }
+      },
+      "derivedFrom": "receiver"
+    },
+    {
+      "id": "combine.flat-map",
+      "call": "*.flatMap(_:)",
+      "elements": "closure:0[]",
+      "closures": {
+        "0": {
+          "parameters": ["receiver[]"]
+        }
+      },
+      "derivedFrom": "receiver"
+    },
+    {
+      "id": "combine.filter",
+      "call": "*.filter(_:)",
+      "result": "receiver",
+      "closures": {
+        "0": {
+          "parameters": ["receiver[]"]
+        }
+      }
+    },
+    {
+      "id": "combine.replace-error",
+      "call": "*.replaceError(with:)",
+      "elements": ["receiver[]", "argument:with"]
+    },
+    {
+      "id": "combine.catch",
+      "call": "*.catch(_:)",
+      "elements": ["receiver[]", "closure:0[]"]
+    },
+    {
+      "id": "combine.pass",
+      "call": "*.eraseToAnyPublisher()",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.map-error",
+      "call": "*.mapError(_:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.receive-on",
+      "call": "*.receive(on:options:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.subscribe-on",
+      "call": "*.subscribe(on:options:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.share",
+      "call": "*.share()",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.remove-duplicates",
+      "call": "*.removeDuplicates()",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.debounce",
+      "call": "*.debounce(for:scheduler:options:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.throttle",
+      "call": "*.throttle(for:scheduler:latest:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.delay",
+      "call": "*.delay(for:scheduler:options:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.retry",
+      "call": "*.retry(_:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.handle-events",
+      "call": "*.handleEvents",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.print",
+      "call": "*.print(_:to:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.set-failure",
+      "call": "*.setFailureType(to:)",
+      "result": "receiver"
+    },
+    {
+      "id": "combine.sink",
+      "call": "*.sink(receiveCompletion:receiveValue:)",
+      "closures": {
+        "receiveCompletion": {
+          "async": true,
+          "on": "completion"
+        },
+        "receiveValue": {
+          "parameters": ["receiver[]"],
+          "async": true,
+          "on": "value"
+        }
+      }
+    },
+    {
+      "id": "combine.sink-value",
+      "call": "*.sink(receiveValue:)",
+      "closures": {
+        "receiveValue": {
+          "parameters": ["receiver[]"],
+          "async": true,
+          "on": "value"
+        }
+      }
+    },
+    {
+      "id": "combine.store",
+      "call": "*.store(in:)",
+      "result": "receiver"
+    }
+  ]
+}

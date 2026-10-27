@@ -1,0 +1,166 @@
+{
+  "version": 10,
+  "imports": [
+    "UIKit"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "function",
+      "name": "formatTitle",
+      "selector": "formatTitle(_:)",
+      "signature": "func formatTitle(_ title: String) -> String",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        5,
+        1,
+        7,
+        2
+      ],
+      "doc": "Formats a title for the current platform.",
+      "conditions": [
+        "os(iOS)"
+      ],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "title",
+          "type": "String"
+        }
+      ],
+      "returnType": "String"
+    },
+    {
+      "localId": 1,
+      "parent": null,
+      "kind": "function",
+      "name": "formatTitle",
+      "selector": "formatTitle(_:)",
+      "signature": "func formatTitle(_ title: String) -> String",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        9,
+        1,
+        11,
+        2
+      ],
+      "doc": null,
+      "conditions": [
+        "!(os(iOS))"
+      ],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "title",
+          "type": "String"
+        }
+      ],
+      "returnType": "String"
+    }
+  ],
+  "references": [
+    {
+      "from": 0,
+      "kind": "type",
+      "name": "String",
+      "line": 5,
+      "column": 34
+    },
+    {
+      "from": 0,
+      "kind": "type",
+      "name": "String",
+      "line": 5,
+      "column": 45
+    },
+    {
+      "from": 0,
+      "kind": "call",
+      "name": "uppercased",
+      "line": 6,
+      "column": 11,
+      "selector": "uppercased()",
+      "receiver": {
+        "kind": "variable",
+        "name": "title",
+        "typeHint": "String",
+        "explicit": true
+      }
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "String",
+      "line": 9,
+      "column": 34
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "String",
+      "line": 9,
+      "column": 45
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 0,
+        "name": "uppercased",
+        "selector": "uppercased()",
+        "reference": 2,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 6,
+        "column": 11,
+        "receiver": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "title",
+            "scope": 1
+          },
+          "members": []
+        }
+      }
+    ],
+    "closures": [],
+    "assignments": [],
+    "bindings": [],
+    "returns": [
+      {
+        "from": 0,
+        "value": {
+          "kind": "call",
+          "call": 0
+        },
+        "line": 6
+      },
+      {
+        "from": 1,
+        "value": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "title",
+            "scope": 2
+          },
+          "members": []
+        },
+        "line": 10
+      }
+    ]
+  },
+  "hasErrors": false
+}

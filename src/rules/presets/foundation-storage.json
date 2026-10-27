@@ -1,0 +1,228 @@
+{
+  "name": "foundation-storage",
+  "description": "Foundation: JSON decoding, URLSession, UserDefaults, Keychain, files, localized strings",
+  "sources": [
+    {
+      "id": "foundation.json-decode",
+      "kind": "api",
+      "call": "JSONDecoder.decode(_:from:)",
+      "type": 0,
+      "input": "from"
+    },
+    {
+      "id": "foundation.url-session-data",
+      "kind": "api",
+      "call": "URLSession.data(from:delegate:)",
+      "type": {
+        "fixed": "Data"
+      },
+      "endpoint": {
+        "call": "URLSession.data(from:delegate:)",
+        "argument": "from",
+        "defaultMethod": "GET"
+      }
+    },
+    {
+      "id": "foundation.url-session-request",
+      "kind": "api",
+      "call": "URLSession.data(for:delegate:)",
+      "type": {
+        "fixed": "Data"
+      },
+      "key": "for"
+    },
+    {
+      "id": "foundation.defaults-string",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.string(forKey:)",
+      "type": {
+        "fixed": "String?"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-bool",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.bool(forKey:)",
+      "type": {
+        "fixed": "Bool"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-integer",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.integer(forKey:)",
+      "type": {
+        "fixed": "Int"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-double",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.double(forKey:)",
+      "type": {
+        "fixed": "Double"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-data",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.data(forKey:)",
+      "type": {
+        "fixed": "Data?"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-object",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.object(forKey:)",
+      "type": {
+        "fixed": "Any?"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-array",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.stringArray(forKey:)",
+      "type": {
+        "fixed": "[String]?"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-url",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.url(forKey:)",
+      "type": {
+        "fixed": "URL?"
+      },
+      "key": "forKey"
+    },
+    {
+      "id": "foundation.defaults-set",
+      "kind": "local.userDefaults",
+      "call": "UserDefaults.set(_:forKey:)",
+      "key": "forKey",
+      "direction": "write",
+      "value": 0
+    },
+    {
+      "id": "foundation.app-storage",
+      "kind": "local.userDefaults",
+      "attribute": "AppStorage"
+    },
+    {
+      "id": "foundation.keychain-read",
+      "kind": "local.keychain",
+      "call": "SecItemCopyMatching(_:_:)",
+      "type": {
+        "fixed": "CFTypeRef?"
+      }
+    },
+    {
+      "id": "foundation.keychain-add",
+      "kind": "local.keychain",
+      "call": "SecItemAdd(_:_:)",
+      "direction": "write"
+    },
+    {
+      "id": "foundation.keychain-update",
+      "kind": "local.keychain",
+      "call": "SecItemUpdate(_:_:)",
+      "direction": "write"
+    },
+    {
+      "id": "foundation.data-contents",
+      "kind": "local.file",
+      "call": "Data(contentsOf:options:)",
+      "type": {
+        "fixed": "Data"
+      },
+      "key": "contentsOf"
+    },
+    {
+      "id": "foundation.string-contents",
+      "kind": "local.file",
+      "call": "String(contentsOf:encoding:)",
+      "type": {
+        "fixed": "String"
+      },
+      "key": "contentsOf"
+    },
+    {
+      "id": "foundation.file-contents",
+      "kind": "local.file",
+      "call": "FileManager.contents(atPath:)",
+      "type": {
+        "fixed": "Data?"
+      },
+      "key": "atPath"
+    },
+    {
+      "id": "foundation.data-write",
+      "kind": "local.file",
+      "call": "Data.write(to:options:)",
+      "key": "to",
+      "direction": "write"
+    },
+    {
+      "id": "foundation.localized-string",
+      "kind": "localization",
+      "call": "NSLocalizedString(_:tableName:bundle:value:comment:)",
+      "type": {
+        "fixed": "String"
+      },
+      "key": 0
+    },
+    {
+      "id": "foundation.string-localized",
+      "kind": "localization",
+      "call": "String(localized:table:bundle:locale:comment:)",
+      "type": {
+        "fixed": "String"
+      },
+      "key": "localized"
+    }
+  ],
+  "flowThrough": [
+    {
+      "id": "foundation.string-data",
+      "call": "*.data(using:allowLossyConversion:)",
+      "result": "receiver"
+    },
+    {
+      "id": "foundation.first",
+      "member": "*.first",
+      "result": "receiver[]"
+    },
+    {
+      "id": "foundation.last",
+      "member": "*.last",
+      "result": "receiver[]"
+    },
+    {
+      "id": "foundation.collection-map",
+      "call": "*.forEach(_:)",
+      "closures": {
+        "0": {
+          "parameters": ["receiver[]"]
+        }
+      }
+    },
+    {
+      "id": "foundation.sorted",
+      "call": "*.sorted(by:)",
+      "result": "receiver",
+      "closures": {
+        "by": {
+          "parameters": ["receiver[]", "receiver[]"]
+        }
+      }
+    }
+  ]
+}

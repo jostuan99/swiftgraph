@@ -1,0 +1,267 @@
+{
+  "version": 10,
+  "imports": [
+    "SwiftUI",
+    "Core"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "struct",
+      "name": "MiniApp",
+      "selector": "MiniApp",
+      "signature": "struct MiniApp: App",
+      "access": null,
+      "modifiers": [],
+      "attributes": [
+        "main"
+      ],
+      "range": [
+        4,
+        1,
+        13,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "App"
+      ]
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "property",
+      "name": "store",
+      "selector": "store",
+      "signature": "var store",
+      "access": "private",
+      "modifiers": [
+        "private"
+      ],
+      "attributes": [
+        "StateObject"
+      ],
+      "range": [
+        6,
+        30,
+        6,
+        51
+      ],
+      "doc": null,
+      "conditions": [],
+      "inferredType": "Store",
+      "isComputed": false
+    },
+    {
+      "localId": 2,
+      "parent": 0,
+      "kind": "property",
+      "name": "body",
+      "selector": "body",
+      "signature": "var body: some Scene",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        8,
+        9,
+        12,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "some Scene",
+      "isComputed": true
+    }
+  ],
+  "references": [
+    {
+      "from": 0,
+      "kind": "inherit",
+      "name": "App",
+      "line": 5,
+      "column": 17
+    },
+    {
+      "from": 1,
+      "kind": "call",
+      "name": "Store",
+      "line": 6,
+      "column": 38,
+      "selector": "Store()",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "Void",
+      "line": 6,
+      "column": 44
+    },
+    {
+      "from": 1,
+      "kind": "attribute",
+      "name": "StateObject",
+      "line": 6,
+      "column": 5
+    },
+    {
+      "from": 2,
+      "kind": "type",
+      "name": "Scene",
+      "line": 8,
+      "column": 20
+    },
+    {
+      "from": 2,
+      "kind": "call",
+      "name": "WindowGroup",
+      "line": 9,
+      "column": 9,
+      "selector": "WindowGroup(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "call",
+      "name": "AppView",
+      "line": 10,
+      "column": 13,
+      "selector": "AppView(store:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 2,
+      "kind": "read",
+      "name": "store",
+      "line": 10,
+      "column": 28,
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 0,
+      "kind": "attribute",
+      "name": "main",
+      "line": 4,
+      "column": 1
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 1,
+        "name": "Store",
+        "selector": "Store()",
+        "reference": 1,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 6,
+        "column": 38
+      },
+      {
+        "from": 2,
+        "name": "WindowGroup",
+        "selector": "WindowGroup(_:)",
+        "reference": 5,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "closure",
+              "closure": 0
+            }
+          }
+        ],
+        "branch": [],
+        "line": 9,
+        "column": 9
+      },
+      {
+        "from": 2,
+        "name": "AppView",
+        "selector": "AppView(store:)",
+        "reference": 6,
+        "parent": null,
+        "closure": 0,
+        "arguments": [
+          {
+            "label": "store",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "self"
+              },
+              "members": [
+                "store"
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 10,
+        "column": 13
+      }
+    ],
+    "closures": [
+      {
+        "scope": 3,
+        "call": 1,
+        "parent": null,
+        "parameters": [],
+        "returns": [
+          {
+            "kind": "call",
+            "call": 2
+          }
+        ]
+      }
+    ],
+    "assignments": [
+      {
+        "from": 1,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "store"
+          ]
+        },
+        "value": {
+          "kind": "call",
+          "call": 0
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 6
+      }
+    ],
+    "bindings": [],
+    "returns": [
+      {
+        "from": 2,
+        "value": {
+          "kind": "call",
+          "call": 1
+        },
+        "line": 9
+      }
+    ]
+  },
+  "hasErrors": false
+}

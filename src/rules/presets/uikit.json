@@ -1,0 +1,48 @@
+{
+  "name": "uikit",
+  "description": "UIKit views built in code: properties and methods that show data, cells, lifecycle entry points",
+  "whenImports": ["UIKit"],
+  "layers": [{ "id": "uikit.view", "layer": "View", "match": { "inherits": ["UIViewController", "UIView"] } }],
+  "sinks": [
+    { "id": "uikit.label-text", "property": "UILabel.text", "direction": "display", "role": "text" },
+    { "id": "uikit.label-attributed", "property": "UILabel.attributedText", "direction": "display", "role": "text" },
+    { "id": "uikit.textfield-text", "property": "UITextField.text", "direction": "input", "role": "text" },
+    { "id": "uikit.textfield-placeholder", "property": "UITextField.placeholder", "direction": "input", "role": "placeholder" },
+    { "id": "uikit.textview-text", "property": "UITextView.text", "direction": "input", "role": "text" },
+    { "id": "uikit.imageview-image", "property": "UIImageView.image", "direction": "display", "role": "image" },
+    { "id": "uikit.switch", "property": "UISwitch.isOn", "direction": "input", "role": "value" },
+    { "id": "uikit.button-title", "call": "UIButton.setTitle(_:for:)", "direction": "action", "arguments": { "0": { "role": "title" } } },
+    { "id": "uikit.button-image", "call": "UIButton.setImage(_:for:)", "direction": "action", "arguments": { "0": { "role": "image" } } },
+    {
+      "id": "uikit.target",
+      "call": "UIControl.addTarget(_:action:for:)",
+      "direction": "action",
+      "arguments": { "action": { "role": "action", "direction": "action" } }
+    },
+    {
+      "id": "uikit.action",
+      "call": "UIControl.addAction(_:for:)",
+      "direction": "action",
+      "arguments": { "0": { "role": "action", "direction": "action" } }
+    },
+    { "id": "uikit.title", "property": "UIViewController.title", "item": "title", "direction": "display", "role": "text" },
+    { "id": "uikit.hidden", "property": "UIView.isHidden", "direction": "display", "role": "hidden" }
+  ],
+  "itemViews": [
+    { "id": "uikit.cell", "match": { "inherits": ["UITableViewCell", "UICollectionViewCell"] } },
+    { "id": "uikit.cell-name", "match": { "name": "*Cell", "inherits": "UIView" } }
+  ],
+  "entryPoints": [
+    { "id": "uikit.view-did-load", "method": "viewDidLoad()", "match": { "inherits": "UIViewController" }, "kind": "lifecycle" },
+    { "id": "uikit.view-will-appear", "method": "viewWillAppear(_:)", "match": { "inherits": "UIViewController" }, "kind": "lifecycle" },
+    { "id": "uikit.view-did-appear", "method": "viewDidAppear(_:)", "match": { "inherits": "UIViewController" }, "kind": "lifecycle" },
+    { "id": "uikit.did-select-row", "method": "tableView(_:didSelectRowAt:)", "kind": "action" },
+    { "id": "uikit.did-select-item", "method": "collectionView(_:didSelectItemAt:)", "kind": "action" },
+    {
+      "id": "uikit.ui-action",
+      "call": "UIAction(title:image:identifier:discoverabilityTitle:attributes:state:handler:)",
+      "closure": "handler",
+      "kind": "action"
+    }
+  ]
+}

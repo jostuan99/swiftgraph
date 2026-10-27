@@ -1,0 +1,557 @@
+{
+  "version": 10,
+  "imports": [],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "protocol",
+      "name": "Logging",
+      "selector": "Logging",
+      "signature": "protocol Logging",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        1,
+        1,
+        3,
+        2
+      ],
+      "doc": null,
+      "conditions": []
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "function",
+      "name": "log",
+      "selector": "log(_:)",
+      "signature": "func log(_ message: String)",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        2,
+        5,
+        2,
+        32
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "message",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "localId": 2,
+      "parent": null,
+      "kind": "extension",
+      "name": "Logging",
+      "selector": "Logging",
+      "signature": "extension Logging",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        5,
+        1,
+        9,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "extendedType": "Logging"
+    },
+    {
+      "localId": 3,
+      "parent": 2,
+      "kind": "function",
+      "name": "log",
+      "selector": "log(_:)",
+      "signature": "func log(_ message: String)",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        6,
+        5,
+        8,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "message",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "localId": 4,
+      "parent": null,
+      "kind": "class",
+      "name": "ConsoleLogger",
+      "selector": "ConsoleLogger",
+      "signature": "class ConsoleLogger: Logging",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        11,
+        1,
+        17,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "Logging"
+      ]
+    },
+    {
+      "localId": 5,
+      "parent": 4,
+      "kind": "initializer",
+      "name": "init",
+      "selector": "init()",
+      "signature": "init()",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        12,
+        5,
+        12,
+        21
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": []
+    },
+    {
+      "localId": 6,
+      "parent": 4,
+      "kind": "function",
+      "name": "log",
+      "selector": "log(_:)",
+      "signature": "func log(_ message: String)",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        14,
+        5,
+        16,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "message",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "localId": 7,
+      "parent": null,
+      "kind": "class",
+      "name": "PrefixLogger",
+      "selector": "PrefixLogger",
+      "signature": "class PrefixLogger: ConsoleLogger",
+      "access": "public",
+      "modifiers": [
+        "public",
+        "final"
+      ],
+      "attributes": [],
+      "range": [
+        19,
+        1,
+        30,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "inherits": [
+        "ConsoleLogger"
+      ]
+    },
+    {
+      "localId": 8,
+      "parent": 7,
+      "kind": "property",
+      "name": "prefix",
+      "selector": "prefix",
+      "signature": "let prefix: String",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        20,
+        9,
+        20,
+        23
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "String",
+      "isComputed": false
+    },
+    {
+      "localId": 9,
+      "parent": 7,
+      "kind": "initializer",
+      "name": "init",
+      "selector": "init(prefix:)",
+      "signature": "init(prefix: String)",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        22,
+        5,
+        25,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "prefix",
+          "name": "prefix",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "localId": 10,
+      "parent": 7,
+      "kind": "function",
+      "name": "log",
+      "selector": "log(_:)",
+      "signature": "func log(_ message: String)",
+      "access": "public",
+      "modifiers": [
+        "public",
+        "override"
+      ],
+      "attributes": [],
+      "range": [
+        27,
+        5,
+        29,
+        6
+      ],
+      "doc": null,
+      "conditions": [],
+      "parameters": [
+        {
+          "label": "_",
+          "name": "message",
+          "type": "String"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "String",
+      "line": 2,
+      "column": 25
+    },
+    {
+      "from": 3,
+      "kind": "type",
+      "name": "String",
+      "line": 6,
+      "column": 32
+    },
+    {
+      "from": 3,
+      "kind": "call",
+      "name": "print",
+      "line": 7,
+      "column": 9,
+      "selector": "print(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 4,
+      "kind": "inherit",
+      "name": "Logging",
+      "line": 11,
+      "column": 29
+    },
+    {
+      "from": 6,
+      "kind": "type",
+      "name": "String",
+      "line": 14,
+      "column": 32
+    },
+    {
+      "from": 6,
+      "kind": "call",
+      "name": "print",
+      "line": 15,
+      "column": 9,
+      "selector": "print(_:)",
+      "receiver": {
+        "kind": "none"
+      }
+    },
+    {
+      "from": 7,
+      "kind": "inherit",
+      "name": "ConsoleLogger",
+      "line": 19,
+      "column": 34
+    },
+    {
+      "from": 8,
+      "kind": "type",
+      "name": "String",
+      "line": 20,
+      "column": 17
+    },
+    {
+      "from": 9,
+      "kind": "type",
+      "name": "String",
+      "line": 22,
+      "column": 25
+    },
+    {
+      "from": 9,
+      "kind": "write",
+      "name": "prefix",
+      "line": 23,
+      "column": 14,
+      "receiver": {
+        "kind": "self"
+      }
+    },
+    {
+      "from": 9,
+      "kind": "call",
+      "name": "init",
+      "line": 24,
+      "column": 15,
+      "selector": "init()",
+      "receiver": {
+        "kind": "super"
+      }
+    },
+    {
+      "from": 10,
+      "kind": "type",
+      "name": "String",
+      "line": 27,
+      "column": 41
+    },
+    {
+      "from": 10,
+      "kind": "call",
+      "name": "log",
+      "line": 28,
+      "column": 15,
+      "selector": "log(_:)",
+      "receiver": {
+        "kind": "super"
+      }
+    },
+    {
+      "from": 10,
+      "kind": "read",
+      "name": "prefix",
+      "line": 28,
+      "column": 19,
+      "receiver": {
+        "kind": "none"
+      }
+    }
+  ],
+  "flow": {
+    "calls": [
+      {
+        "from": 3,
+        "name": "print",
+        "selector": "print(_:)",
+        "reference": 2,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "path",
+              "root": {
+                "kind": "local",
+                "name": "message",
+                "scope": 2
+              },
+              "members": []
+            }
+          }
+        ],
+        "branch": [],
+        "line": 7,
+        "column": 9
+      },
+      {
+        "from": 6,
+        "name": "print",
+        "selector": "print(_:)",
+        "reference": 5,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "compound",
+              "text": "\"[console] \" + message",
+              "operands": [
+                {
+                  "kind": "literal",
+                  "type": "String",
+                  "value": "[console] "
+                },
+                {
+                  "kind": "path",
+                  "root": {
+                    "kind": "local",
+                    "name": "message",
+                    "scope": 4
+                  },
+                  "members": []
+                }
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 15,
+        "column": 9
+      },
+      {
+        "from": 9,
+        "name": "init",
+        "selector": "init()",
+        "reference": 10,
+        "parent": null,
+        "closure": null,
+        "arguments": [],
+        "branch": [],
+        "line": 24,
+        "column": 15,
+        "receiver": {
+          "kind": "compound",
+          "text": "super",
+          "operands": []
+        }
+      },
+      {
+        "from": 10,
+        "name": "log",
+        "selector": "log(_:)",
+        "reference": 12,
+        "parent": null,
+        "closure": null,
+        "arguments": [
+          {
+            "label": "_",
+            "value": {
+              "kind": "compound",
+              "text": "prefix + message",
+              "operands": [
+                {
+                  "kind": "path",
+                  "root": {
+                    "kind": "self"
+                  },
+                  "members": [
+                    "prefix"
+                  ]
+                },
+                {
+                  "kind": "path",
+                  "root": {
+                    "kind": "local",
+                    "name": "message",
+                    "scope": 7
+                  },
+                  "members": []
+                }
+              ]
+            }
+          }
+        ],
+        "branch": [],
+        "line": 28,
+        "column": 15,
+        "receiver": {
+          "kind": "compound",
+          "text": "super",
+          "operands": []
+        }
+      }
+    ],
+    "closures": [],
+    "assignments": [
+      {
+        "from": 9,
+        "target": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "prefix"
+          ]
+        },
+        "value": {
+          "kind": "path",
+          "root": {
+            "kind": "local",
+            "name": "prefix",
+            "scope": 6
+          },
+          "members": []
+        },
+        "operator": "=",
+        "branch": [],
+        "line": 23
+      }
+    ],
+    "bindings": [],
+    "returns": []
+  },
+  "hasErrors": false
+}

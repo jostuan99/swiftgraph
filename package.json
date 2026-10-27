@@ -1,0 +1,42 @@
+{
+  "name": "swiftgraph",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Code graph of Swift projects for coding agents, stored in SQLite",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "swiftgraph": "src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'",
+    "typecheck": "tsc -p .",
+    "bench:proxy": "node bench/proxy.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "better-sqlite3-multiple-ciphers": "^13.0.3",
+    "commander": "^15.0.0",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "graphology-layout-forceatlas2": "^0.10.1",
+    "graphology-metrics": "^2.4.2",
+    "tree-sitter": "^0.25.0",
+    "tree-sitter-swift": "file:../tree-sitter-swift",
+    "zod": "^4.6.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JosSteve/swiftgraph.git"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prettier": "3.9.10",
+    "typescript": "^6.0.3"
+  }
+}

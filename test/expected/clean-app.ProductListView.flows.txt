@@ -1,0 +1,43 @@
+ProductListView  [SwiftUI View, layer View]  Sources/CleanApp/Presentation/ProductListView.swift:3
+
+ProductListView/F1  create  ProductListView init → viewModel = AppContainer.shared.makeProductListViewModel()  ProductListView.swift:4
+ 1 [View]        viewModel = AppContainer.shared.makeProductListViewModel()                                                            ProductListView.swift:4
+ 2 [DI]            AppContainer.makeProductListViewModel()                                                                             AppContainer.swift:18
+ 3 [ViewModel]       ProductListViewModel.init(repository:settings:)                                                                   ProductListViewModel.swift:19
+                       writes
+                         ProductListViewModel.lastUpdated ← userDefaults "lastUpdated"
+ 4 [Repository]        ProductRepositoryImpl.cachedProducts()  (DI: ProductRepository → ProductRepositoryImpl  AppContainer.swift:13)  ProductRepository.swift:18
+ 5 [Storage]             ProductCache.load()                                                                                           ProductCache.swift:6
+ 6 [file]                  read "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")"                     ProductCache.swift:7
+                             failure
+                               try? → Data(contentsOf:) → Data  ⚠ error ignored: nothing is shown or stored on failure
+ 7 [file]                  read                                                                                                        ProductCache.swift:8
+                             success
+                               ProductListViewModel.rows ← file [ProductDTO]  (map → [ProductRowViewData])  → #2, ProductRow#1, ProductRow#2
+                                   .name ← file [ProductDTO][].name  (formatted)
+                                   .price ← file [ProductDTO][].price  (formatted)
+                             failure
+                               try? → JSONDecoder.decode([ProductDTO])  ⚠ error ignored: nothing is shown or stored on failure
+
+ProductListView/F2  task  ProductListView .task  ProductListView.swift:12
+ 1 [ViewModel]     ProductListViewModel.reload()                                                                               ProductListViewModel.swift:26
+                     writes
+                       ProductListViewModel.errorMessage ← nil
+ 2 [Repository]      ProductRepositoryImpl.products()  (DI: ProductRepository → ProductRepositoryImpl  AppContainer.swift:13)  ProductRepository.swift:14
+ 3 [Service]           ProductServiceImpl.fetchProducts()  (DI: ProductService → ProductServiceImpl  AppContainer.swift:10)    ProductService.swift:14
+ 4 [keychain]            read "accessToken"                                                                                    ProductService.swift:15
+ 5 [api]                 GET https://api.example.com/v1/products → ProductListResponse                                         ProductService.swift:17
+                           success
+                             ProductListViewModel.title ← title
+                             ProductListViewModel.rows ← items  (map → [ProductRowViewData])  → #2, ProductRow#1, ProductRow#2
+                                 .name ← items[].product_name
+                                 .price ← items[].price  (formatted)
+                             ProductListViewModel.lastUpdated ← Date()
+                           failure
+                             catch let error as AFError → ProductListViewModel.errorMessage ← error GET https://api.example.com/v1/products
+                             catch → ProductListViewModel.rows ← []  → #2, ProductRow#1, ProductRow#2
+                             catch → ProductListViewModel.errorMessage ← error GET https://api.example.com/v1/products
+ 6 [Storage]         SettingsStore.markUpdated(_:)                                                                             SettingsStore.swift:10
+ 7 [userDefaults]      write "lastUpdated"  (UserDefaults.set)                                                                 SettingsStore.swift:11
+
+More: --steps

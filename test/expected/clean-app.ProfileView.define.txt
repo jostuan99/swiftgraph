@@ -1,0 +1,22 @@
+ProfileView  [SwiftUI View, layer View]  Sources/CleanApp/Presentation/Profile/ProfileView.swift:3
+  state:     @StateObject viewModel: ProfileViewModel = ProfileViewModel()  ProfileView.swift:4
+  children:  PointsBadge (subview, ProfileView.swift:9); AvatarView (subview, ProfileView+Header.swift:6)
+
+ITEMS (6)
+ id             line                          kind        dir      when  datasource
+ ProfileView#1  ProfileView+Header.swift:7    Text        display        GET https://api.example.com/v1/me display_name
+ ProfileView#2  ProfileView+Settings.swift:6  Toggle      input          userDefaults "notificationsEnabled"
+ ProfileView#3  ProfileView+Settings.swift:7  TextField   input          ProfileViewModel.nickname; label localization "profile.nickname" (en "Nickname", missing ja); placeholder localization "profile.nickname.placeholder" (en "Enter a nickname", ja "ニックネームを入力")
+ ProfileView#4  ProfileView+Settings.swift:8  Button      action         localization "profile.logout"
+ PointsBadge#1  PointsBadge.swift:7           Label       display        GET https://api.example.com/v1/me points
+ AvatarView#1   AvatarView.swift:7            AsyncImage  display        GET https://api.example.com/v1/me avatar_url
+
+SUMMARY
+ api           GET "https://api.example.com/v1/me" → serializingDecodable → ProfileResponse  .displayName: String "display_name", .points: Int "points", .avatarURL: URL? "avatar_url"
+ local         none
+ file          none
+ localization  Localizable: 4 keys (2 missing in ja)
+ input         notificationsEnabled: Bool, nickname: String  (2 not read elsewhere)
+ unresolved    none
+
+More: --detail (DATA, CONDITIONS) or --item <id>

@@ -1,0 +1,114 @@
+{
+  "version": 10,
+  "imports": [
+    "Combine"
+  ],
+  "declarations": [
+    {
+      "localId": 0,
+      "parent": null,
+      "kind": "extension",
+      "name": "Store",
+      "selector": "Store",
+      "signature": "extension Store: ObservableObject",
+      "access": null,
+      "modifiers": [],
+      "attributes": [],
+      "range": [
+        3,
+        1,
+        5,
+        2
+      ],
+      "doc": null,
+      "conditions": [],
+      "extendedType": "Store",
+      "inherits": [
+        "ObservableObject"
+      ]
+    },
+    {
+      "localId": 1,
+      "parent": 0,
+      "kind": "property",
+      "name": "count",
+      "selector": "count",
+      "signature": "var count: Int",
+      "access": "public",
+      "modifiers": [
+        "public"
+      ],
+      "attributes": [],
+      "range": [
+        4,
+        16,
+        4,
+        42
+      ],
+      "doc": null,
+      "conditions": [],
+      "type": "Int",
+      "isComputed": true
+    }
+  ],
+  "references": [
+    {
+      "from": 0,
+      "kind": "inherit",
+      "name": "ObservableObject",
+      "line": 3,
+      "column": 18
+    },
+    {
+      "from": 1,
+      "kind": "type",
+      "name": "Int",
+      "line": 4,
+      "column": 23
+    },
+    {
+      "from": 1,
+      "kind": "read",
+      "name": "count",
+      "line": 4,
+      "column": 35,
+      "receiver": {
+        "kind": "self_member",
+        "name": "items"
+      }
+    },
+    {
+      "from": 1,
+      "kind": "read",
+      "name": "items",
+      "line": 4,
+      "column": 29,
+      "receiver": {
+        "kind": "none"
+      }
+    }
+  ],
+  "flow": {
+    "calls": [],
+    "closures": [],
+    "assignments": [],
+    "bindings": [],
+    "returns": [
+      {
+        "from": 1,
+        "value": {
+          "kind": "path",
+          "root": {
+            "kind": "self"
+          },
+          "members": [
+            "items",
+            "count"
+          ]
+        },
+        "line": 4
+      }
+    ]
+  },
+  "hasErrors": false
+}
