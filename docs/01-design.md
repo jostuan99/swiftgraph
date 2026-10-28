@@ -445,7 +445,7 @@ Theo [ADR-0001](adr/0001-repository-layout.md):
 
 ```
 swiftgraph/                  # repo riêng, cạnh tree-sitter-swift/
-├── package.json             # bin: swiftgraph; dependency tree-sitter-swift (file:../tree-sitter-swift)
+├── package.json             # bin: swiftgraph; dependency tree-sitter-swift (github:jostuan99/tree-sitter-swift#<commit>)
 ├── src/
 │   ├── discover/            # file list, module map (Package.swift, thư mục)
 │   ├── extract/             # swift.ts (duyệt cây → FileFacts), pool.ts + worker.ts (process con)

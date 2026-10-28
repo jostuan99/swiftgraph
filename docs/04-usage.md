@@ -9,7 +9,7 @@ Thiết kế chi tiết: [01-design.md](01-design.md). Dữ liệu localization:
 Cần:
 
 - Node ≥ 22.18 (chạy TypeScript trực tiếp, không cần build).
-- Grammar `tree-sitter-swift` checkout cạnh repo này (chưa publish lên npm). `npm install` trong grammar build binding Node, cần trình biên dịch C (Xcode Command Line Tools trên macOS, `build-essential` trên Linux).
+- Grammar `tree-sitter-swift` lấy từ GitHub (`jostuan99/tree-sitter-swift`, commit ghi trong `package.json`). `npm install` build binding Node của grammar, cần trình biên dịch C (Xcode Command Line Tools trên macOS, `build-essential` trên Linux).
 
 ```
 <thư mục>/
@@ -132,7 +132,7 @@ swiftgraph path MiniApp.body 'Logging.log(_:)'
 swiftgraph impact Sources/Core/Model.swift
 swiftgraph area Store
 swiftgraph source 'Store.reduce(_:)' --context 2
-swiftgraph view . --open                           # trang HTML xem graph, không truy cập mạng
+swiftgraph view . --open                           # trang HTML xem graph, không truy cập mạng: tìm symbol, neighbor, ẩn/hiện area
 ```
 
 Tên symbol nhận ID đầy đủ (`swift:App/Store.send(_:)`), tên có type (`Store.send(_:)`) hoặc tên gốc (`send`). Khi nhiều symbol khớp, lệnh in danh sách để chọn.

@@ -27,7 +27,7 @@
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-metrics": "^2.4.2",
     "tree-sitter": "^0.25.0",
-    "tree-sitter-swift": "file:../tree-sitter-swift",
+    "tree-sitter-swift": "github:jostuan99/tree-sitter-swift#b985b7a42f5beee602b0d4ea184f91acd3dec7b3",
     "zod": "^4.6.7"
   },
   "repository": {

@@ -10,3 +10,5 @@ node_modules/
 .index-build/
 # SwiftPM resolution of the fixtures
 Package.resolved
+# No lockfile: dependencies resolve from package.json
+package-lock.json

@@ -15,7 +15,7 @@ swiftgraph được bắt đầu như npm workspace `packages/swiftgraph` bên t
   ├── tree-sitter-swift/   grammar, scanner, queries, bindings, docs của grammar
   └── swiftgraph/          code graph, MCP server, docs của swiftgraph
   ```
-- swiftgraph phụ thuộc grammar như một package npm bình thường: `import Swift from 'tree-sitter-swift'`. Khi grammar chưa publish, `package.json` khai báo `"tree-sitter-swift": "file:../tree-sitter-swift"`.
+- swiftgraph phụ thuộc grammar như một package npm bình thường: `import Swift from 'tree-sitter-swift'`. Khi grammar chưa publish lên npm, `package.json` khai báo `"tree-sitter-swift": "github:jostuan99/tree-sitter-swift#<commit>"` (trước 2026-10-28 là `file:../tree-sitter-swift`).
 - swiftgraph tự khai báo `tree-sitter` (binding Node) trong dependencies.
 - Tài liệu swiftgraph nằm ở `swiftgraph/docs/`; ADR đánh số lại từ 0001. Repo grammar giữ docs của grammar (`docs/01`–`07`, ADR-0001, ADR-0002 của grammar).
 - CI của swiftgraph checkout cả hai repo cạnh nhau và build grammar trước.

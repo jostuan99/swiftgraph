@@ -14,6 +14,15 @@ test('the view is one self-contained page that cannot reach the network', async 
     db.close();
     assert.ok(data.nodes.some((node) => node[1] === 'Core.Store'));
     assert.ok(data.edges.length > 0);
+    for (const [source, target, kind, extracted] of data.edges) {
+      assert.ok(data.nodes[source] && data.nodes[target] && data.edgeKinds[kind]);
+      assert.ok(extracted === 0 || extracted === 1);
+    }
+    // The legend counts every shown node once.
+    assert.equal(
+      data.areas.reduce((sum, area) => sum + area.size, 0),
+      data.nodes.length,
+    );
     for (const node of data.nodes) assert.ok(Number.isFinite(node[5]) && Number.isFinite(node[6]));
 
     const html = viewHtml({ ...data, title: '</script><script>alert(1)</script>' });

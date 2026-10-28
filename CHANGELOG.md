@@ -22,7 +22,7 @@
 - Conformance do macro phổ biến sinh ra (`@Observable`, `@Model`, `@Reducer`, `@ObservableState`, `@DependencyClient`).
 - Module map cho dự án Xcode: thư mục cạnh `*.xcodeproj` thành module; `--module` được lưu giữa các lần build, thêm `--reset-modules`.
 - Report: mục "Unusual links between areas".
-- `swiftgraph view`: trang HTML tự chứa để xem graph, không truy cập mạng.
+- `swiftgraph view`: trang HTML tự chứa để xem graph, không truy cập mạng. Sidebar: tìm symbol, thông tin symbol (kind, area, file, degree), danh sách neighbor bấm được kèm loại edge và chiều, legend area bấm để ẩn/hiện, thống kê. Edge vẽ có chiều; `EXTRACTED` nét liền, `INFERRED` nét đứt; symbol trung tâm nhất luôn có nhãn; hover hiện tên.
 
 ### Hiệu năng
 

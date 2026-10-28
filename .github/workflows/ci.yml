@@ -14,27 +14,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      # swiftgraph depends on the grammar as a sibling checkout (file:../tree-sitter-swift).
+      # The grammar comes from GitHub (package.json), built by npm install.
       - uses: actions/checkout@v4
         with:
           path: swiftgraph
-
-      - uses: actions/checkout@v4
-        with:
-          repository: JosSteve/tree-sitter-swift
-          path: tree-sitter-swift
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Build the grammar
-        working-directory: tree-sitter-swift
-        run: npm ci
-
       - name: Install dependencies
         working-directory: swiftgraph
-        run: npm ci
+        run: npm install
 
       - name: Format
         working-directory: swiftgraph

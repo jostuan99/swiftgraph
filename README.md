@@ -21,13 +21,7 @@ Chỉ đọc nội dung file `.swift`, `.strings`, `.stringsdict`, `.xcstrings`.
 
 ## Dùng
 
-Cần Node ≥ 22.18 (chạy TypeScript trực tiếp) và grammar `tree-sitter-swift` checkout cạnh repo này (chưa publish npm):
-
-```
-Startup/
-├── tree-sitter-swift/    (cd tree-sitter-swift && npm install)  # build binding Node của grammar
-└── swiftgraph/           (cd swiftgraph && npm install)
-```
+Cần Node ≥ 22.18 (chạy TypeScript trực tiếp) và trình biên dịch C. `npm install` lấy grammar `tree-sitter-swift` từ GitHub (commit ghi trong `package.json`) và build binding Node của nó.
 
 ```sh
 node src/cli.ts build /path/to/swift-repo
