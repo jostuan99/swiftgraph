@@ -1,9 +1,6 @@
 node_modules/
 # Graph databases (never committed)
 .swiftgraph/
-# SwiftPM builds of the evaluation tool and fixtures
+# SwiftPM builds of the fixtures
 .build/
 .swiftpm/
-# Evaluation clones and graphs (eval/run-bench.sh, eval/run-indexstore.sh)
-eval/repos/
-eval/graphs/

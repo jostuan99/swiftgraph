@@ -207,8 +207,6 @@ swiftgraph đọc cú pháp, không chạy type checker của Swift:
 - Code do macro sinh ra không được đọc. Một số macro phổ biến được hiểu sẵn (`@Observable`, `@Model`, `@Reducer`, `@ObservableState`, `@DependencyClient`).
 - Key path (`\.id`), `$0.id` và ghi qua method `mutating` (`items.append(x)`) chưa được ghi nhận đầy đủ là đọc/ghi property.
 
-Độ chính xác của edge `CALLS` được đo với index store của compiler (`eval/README.md`).
-
 ## 7. Dữ liệu và bảo mật
 
 - swiftgraph chỉ mở file `.swift`, `.strings`, `.stringsdict`, `.xcstrings` (và `Package.swift` để lấy module). Không đọc `Info.plist`, `project.pbxproj` hay file khác; không theo symlink; không gọi mạng.

@@ -458,8 +458,7 @@ swiftgraph/                  # repo riêng, cạnh tree-sitter-swift/
 │   ├── cli.ts
 │   └── mcp.ts
 └── test/
-    ├── fixtures/            # mini repo Swift có graph kỳ vọng (golden)
-    └── eval/                # so với indexstore, benchmark token
+    └── fixtures/            # mini repo Swift có graph kỳ vọng (golden)
 ```
 
 Thư viện dự kiến:

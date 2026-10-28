@@ -2,7 +2,7 @@
 
 Code graph của dự án Swift cho coding agent (Claude Code, Cursor, Codex, ...), lưu trong SQLite. Agent hỏi graph qua MCP hoặc CLI thay vì grep và đọc lại file thô. Dựng trên grammar [tree-sitter-swift](../tree-sitter-swift) (repo riêng).
 
-> Trạng thái: G0–G7 xong, trừ hai phép đo cần chạy ngoài: benchmark với agent thật (tốn token) và so với index store trên repo thật (build repo đó). Bắt đầu từ [docs/04-usage.md](docs/04-usage.md). Xem [docs/02-plan.md](docs/02-plan.md).
+> Trạng thái: G0–G7 xong, trừ benchmark với agent thật (tốn token). Bắt đầu từ [docs/04-usage.md](docs/04-usage.md). Xem [docs/02-plan.md](docs/02-plan.md).
 
 ## Tài liệu
 
@@ -14,7 +14,6 @@ Code graph của dự án Swift cho coding agent (Claude Code, Cursor, Codex, ..
 | [docs/03-localization.md](docs/03-localization.md) | Dữ liệu `.strings`/`.stringsdict`/`.xcstrings` |
 | [docs/05-data-flow.md](docs/05-data-flow.md) | Luồng dữ liệu tới view: `define` (item màn hình và nguồn dữ liệu), `flows` (luồng xử lý), rule tuỳ biến theo dự án (`swiftgraph.json`) |
 | [docs/adr/](docs/adr/) | ADR-0001 bố cục repo, ADR-0002 SQLite là nơi lưu trữ duy nhất, ADR-0003 build trong process con |
-| [eval/README.md](eval/README.md) | Đánh giá: benchmark token, so với index store của compiler |
 
 ## Phạm vi
 
@@ -64,12 +63,11 @@ Hoặc chỉ thêm MCP server:
 claude mcp add swiftgraph -- node /path/to/swiftgraph/src/cli.ts mcp /path/to/swift-repo
 ```
 
-Benchmark và đánh giá (chi tiết ở [eval/README.md](eval/README.md)):
+Benchmark trên repo tham chiếu (`bench/repos.txt`; clone đúng tag vào `<repos>`, build graph `<graphs>/<repo>.db`):
 
 ```sh
-eval/run-bench.sh --min-correct 13 --min-ratio 5               # clone repo tham chiếu, benchmark không dùng LLM (CI)
-eval/run-indexstore.sh swift-argument-parser --min-precision 95 # so với index store (macOS, Swift 6.4)
-node bench/agent.ts eval/graphs eval/repos                      # chạy claude -p, tốn token
+node bench/proxy.ts <graphs> <repos> --min-correct 13 --min-ratio 5   # benchmark token không dùng LLM
+node bench/agent.ts <graphs> <repos>                                  # chạy claude -p, tốn token
 ```
 
 Localization (`.strings`, `.stringsdict`, `.xcstrings`):
@@ -136,7 +134,6 @@ UPDATE_GOLDEN=1 npm test        # sinh lại golden facts, rồi review diff
 | `src/install.ts` | install/uninstall cho agent, hook |
 | `bench/` | bộ câu hỏi, benchmark proxy và với agent thật |
 | `src/store/` | mở SQLite (quyền file, readonly), migration, ghi graph |
-| `eval/` | đánh giá với index store của compiler (`eval/README.md`) |
 | `src/schema/types.ts` | kiểu dữ liệu chung |
 | `test/fixtures/mini-app/` | dự án Swift nhỏ (biên dịch được) dùng cho mọi test |
 | `test/expected/` | edge và issue kỳ vọng viết tay cho G2/GL |

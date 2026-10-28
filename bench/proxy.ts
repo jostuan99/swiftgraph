@@ -10,7 +10,7 @@
 // Usage: node bench/proxy.ts <graph directory with <repo>.db files> <repos root>
 //          [--min-correct N] [--min-ratio X]
 // With thresholds, exits with status 1 when fewer than N answers are found or
-// the total token ratio is below X (used by CI, eval/run-bench.sh).
+// the total token ratio is below X. Repositories and tags: bench/repos.txt.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

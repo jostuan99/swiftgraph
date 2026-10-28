@@ -37,6 +37,7 @@
 - Tách khỏi repo `tree-sitter-swift` thành repo riêng; phụ thuộc grammar qua package `tree-sitter-swift` (ADR-0001).
 - Tài liệu: hướng dẫn sử dụng `docs/04-usage.md`; thiết kế luồng dữ liệu tới view `docs/05-data-flow.md` (giai đoạn GF).
 - Fixture `test/fixtures/clean-app` (UIKit + SwiftUI, Alamofire, UserDefaults, Keychain, file, Swinject, Combine + async/await).
-- Eval trong CI (`.github/workflows/eval.yml`): `eval/run-bench.sh` (benchmark token, ngưỡng số câu đúng và tỉ lệ token), `eval/run-indexstore.sh` (precision so với index store); `bench/proxy.ts --min-correct/--min-ratio`, `eval/compare-calls.ts --min-precision`.
+- `bench/proxy.ts --min-correct/--min-ratio`: ngưỡng số câu đúng và tỉ lệ token; repo tham chiếu ở `bench/repos.txt`.
+- Bỏ bộ đánh giá `eval/` (so với index store của compiler) và workflow `.github/workflows/eval.yml`.
 - Format code bằng Prettier (`npm run format`, kiểm tra trong CI).
-- G0–G6, GL: extractor, resolver, lưu trữ SQLite (có mã hoá), build incremental, community/PageRank, report, query CLI, MCP server, install/hook cho agent, dữ liệu localization, eval với index store, benchmark proxy.
+- G0–G6, GL: extractor, resolver, lưu trữ SQLite (có mã hoá), build incremental, community/PageRank, report, query CLI, MCP server, install/hook cho agent, dữ liệu localization, benchmark proxy.

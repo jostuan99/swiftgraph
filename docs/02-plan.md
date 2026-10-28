@@ -48,9 +48,9 @@ Repo tham chiếu dùng lại `scripts/repos.txt` của tree-sitter-swift (clone
 - [x] Các lượt sau: `CONFORMS_TO`/`INHERITS`, `EXTENDS`, `IMPLEMENTS`, `OVERRIDES`, `INSTANTIATES`, `RENDERS`, `TESTS`, `WRAPS`, `EXPANDS`, `READS`/`WRITES`, `REFERENCES`.
 - [x] Bảng symbol SDK (Swift, Foundation, Combine, Observation, SwiftUI, UIKit, AppKit, XCTest, SwiftData) trong `src/resolve/sdk.ts`. Tên không có trong bảng và không khai báo trong repo thì không tạo node (có thể là generic parameter).
 - [x] Ghi graph vào SQLite trong một transaction (`src/store/write-graph.ts`); build không có thay đổi thì giữ nguyên graph.
-- [x] Bộ đánh giá `eval/`: `indexstore-calls` (Swift, indexstore-db `swift-6.4.0-RELEASE`) xuất lời gọi từ index store; `compare-calls.ts` tính precision/recall cho `CALLS`/`INSTANTIATES` và `READS`/`WRITES`.
+- [x] Bộ đánh giá `eval/`: `indexstore-calls` (Swift, indexstore-db `swift-6.4.0-RELEASE`) xuất lời gọi từ index store; `compare-calls.ts` tính precision/recall cho `CALLS`/`INSTANTIATES` và `READS`/`WRITES`. Đã bỏ khỏi project (2026-10-28).
 - [x] Test: graph của fixture khớp `test/expected/mini-app.edges.tsv` (trừ `USES_STRING` thuộc GL), test selector, `#if`, `AMBIGUOUS`.
-- [ ] Đo SG4 trên repo tham chiếu. Cần biên dịch repo bên thứ ba (chạy build plugin/macro của họ); bước này bị chặn bởi chế độ quyền hiện tại, chờ người dùng cho phép (xem `eval/README.md`).
+- [ ] Đo SG4 trên repo tham chiếu: không làm, bộ đánh giá `eval/` đã bỏ (2026-10-28).
 
 **Xong khi:** fixture khớp graph kỳ vọng ✅; trên repo tham chiếu precision `CALLS` (EXTRACTED + INFERRED) ≥ 95% (SG4), có báo cáo recall; tỉ lệ `AMBIGUOUS` được ghi lại làm baseline ✅.
 
@@ -187,8 +187,7 @@ Diễn giải:
 - [x] Hiệu năng: profile và giảm bộ nhớ cho repo 10k file (ADR-0003, bảng dưới). Partial update dưới 1 s chưa đạt: cần giữ bảng symbol giữa các lần build (xem cuối mục).
 - [x] Tách repo: swiftgraph và tree-sitter-swift là hai repo riêng (ADR-0001); CI riêng checkout cả hai.
 - [x] Docs người dùng: [04-usage.md](04-usage.md).
-- [x] CI chạy eval trên repo tham chiếu (`.github/workflows/eval.yml`): benchmark token mỗi push/PR (`eval/run-bench.sh`, ngưỡng 13/15 câu và 5×); so với index store khi gọi tay và hằng tuần (`eval/run-indexstore.sh`, precision ≥ 95%, cần Swift 6.4).
-- [ ] Chạy `eval/run-indexstore.sh` trên swift-argument-parser để có số SG4 trên repo thật (hiện chỉ có số trên fixture). Script build repo bằng `swift build`, tức là chạy code build của repo đó; cần người dùng chạy hoặc cho phép.
+- [x] CI chạy eval trên repo tham chiếu (`.github/workflows/eval.yml`). Đã bỏ khỏi project cùng `eval/` (2026-10-28); benchmark chạy tay bằng `bench/proxy.ts`.
 
 Số đo trên repo tổng hợp 10.389 file `.swift` (3 bản sao của `test/repos`, 107 MB; 260.341 node, 1.356.467 edge). RSS là tổng của process chính và các process con:
 
@@ -224,7 +223,7 @@ Số đo các mục tiêu (2026-10-27):
 | SG1: 2.000 file < 30 s; incremental < 1 s mỗi file | 3.463 file: build đầy đủ 10,6 s, partial update 0,65 s; 10.389 file: 29–32 s và 1,7 s | ✅ (ở cỡ mục tiêu) |
 | SG2: mỗi edge có mức tin cậy và bằng chứng | mọi edge có `confidence`; evidence (file, dòng) tối đa 20 vị trí | ✅ |
 | SG3: query < 50 ms | 1–44 ms trên graph 82k node (G5) | ✅ |
-| SG4: precision `CALLS` ≥ 95% so với index store | fixture: 100% (25/25); repo thật: chưa chạy | ⏳ |
+| SG4: precision `CALLS` ≥ 95% so với index store | fixture: 100% (25/25); repo thật: không đo (`eval/` đã bỏ) | ⏳ |
 | SG5: ít token hơn ≥ 5 lần, độ đúng không giảm | proxy: 42,4×, 13/15 câu; với agent thật: chưa chạy (`bench/agent.ts`, tốn token) | ⏳ |
 | SG6: offline, không LLM | không có lời gọi mạng hay LLM trong `src/` | ✅ |
 

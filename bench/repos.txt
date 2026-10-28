@@ -1,4 +1,4 @@
-# Reference repositories for the evaluation (bench/questions.ts, eval/run-indexstore.sh).
+# Reference repositories for the benchmark (bench/questions.ts).
 # Format: <git url> <tag>. Answers in bench/questions.ts are checked against these tags.
 https://github.com/apple/swift-nio.git 2.77.0
 https://github.com/pointfreeco/swift-composable-architecture.git 1.17.0

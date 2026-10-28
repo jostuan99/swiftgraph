@@ -1,7 +1,5 @@
 node_modules/
 samples/
-eval/repos/
-eval/graphs/
 test/golden/
 test/expected/
 test/fixtures/

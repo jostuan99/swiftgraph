@@ -17,5 +17,5 @@
       "better-sqlite3-multiple-ciphers": ["./node_modules/better-sqlite3-multiple-ciphers/index.d.ts"]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "eval/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "bench/**/*.ts"]
 }
