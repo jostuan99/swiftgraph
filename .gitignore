@@ -4,3 +4,9 @@ node_modules/
 # SwiftPM builds of the fixtures
 .build/
 .swiftpm/
+# IDE, macOS and local index files
+.idea/
+.DS_Store
+.index-build/
+# SwiftPM resolution of the fixtures
+Package.resolved
