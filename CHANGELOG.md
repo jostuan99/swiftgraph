@@ -5,6 +5,7 @@
 ### Màn hình: `define` và `flows`
 
 - Command `define <screen>` và `flows <screen>`, tool MCP `get_screen_definition`, `get_screen_flows` (docs/05-data-flow.md): item của màn hình SwiftUI hoặc UIKit dựng bằng code, nguồn của từng giá trị (API kèm endpoint, type và JSON key; UserDefaults, Keychain, file; localization kèm ngôn ngữ thiếu; input), điều kiện hiển thị; luồng xử lý từ mỗi điểm vào qua các lớp, kèm DI, generic, closure async, cảnh báo (ép kiểu luôn thất bại, JSON literal không hợp lệ, hàm xử lý lỗi rỗng, input không được đọc).
+- MCP server gửi instruction cách đọc output `define`/`flows` (legend, id item, cột `ITEMS`, `SUMMARY`, bước dữ liệu, `success`/`failure`, cảnh báo `⚠`).
 - `define` mặc định chỉ in `ITEMS` và `SUMMARY` (`--detail` cho `DATA`, `CONDITIONS`). `datasource` của ô nhập ghi placeholder/prompt đã localize (key, bản dịch, ngôn ngữ thiếu); `Text` truyền làm `prompt:` không còn là item riêng. Nguồn `error`: lỗi bắt được trong `catch`, kèm API ném ra.
 - `flows` mặc định là góc nhìn dữ liệu: mỗi bước là get/set datasource hoặc biến ViewModel (giá trị ghi xuống storage), bỏ lớp ở giữa; bước đọc datasource ghi biến được gán (`vm.notificationsEnabled ← read userDefaults "notificationsEnabled"`). Bản tóm tắt gồm `path`, `success` (dữ liệu ghi vào ViewModel, field JSON nguồn của từng field sau `map`, item hiển thị), `failure`, `stores`; `success`/`failure` chỉ giữ thay đổi dữ liệu.
 - `flows --calls`: các lời gọi qua từng lớp, đánh số. `--steps`: mọi bước theo thứ tự thực thi.

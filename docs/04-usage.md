@@ -171,7 +171,7 @@ swiftgraph flows LoginView --entry LoginView#5      # luồng của một item (
 swiftgraph flows LoginView --format mermaid         # sequence diagram theo lớp kiến trúc
 ```
 
-Tool MCP tương ứng: `get_screen_definition`, `get_screen_flows`; mặc định trả `compact`.
+Tool MCP tương ứng: `get_screen_definition`, `get_screen_flows`; mặc định trả `compact`. Server gửi kèm instruction (`INSTRUCTIONS` trong `src/mcp.ts`) giải thích cách đọc output của hai tool này cho agent.
 
 Tiết kiệm token khi agent đọc: hỏi hẹp (`--item`, `--entry`, `--source api`, `--no-children`), dùng `compact`, chỉ thêm `--detail`/`--steps` khi cần. `text` (mặc định) và `compact` đều không căn cột, ghi file một lần cho các dòng liên tiếp (`@:49`), đưa host API, view model, binding DI lên legend đầu output (`# api = https://api.example.com`, `# vm = ProductListViewModel`, `# di: …`), chỉ ghi tag lớp khi lớp đổi và bỏ tên màn hình trước method của nó; `compact` thụt lề 1 khoảng và bỏ dòng gợi ý. `--format pretty` in bản căn cột. Trên fixture, so với `pretty`: `define` còn 55–80%, `flows` còn 50–65%.
 

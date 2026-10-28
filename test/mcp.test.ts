@@ -38,6 +38,7 @@ test('MCP tools answer over an in-memory transport', async () => {
         'search_symbols',
       ]);
       assert.ok(tools.every((tool) => tool.annotations?.readOnlyHint === true));
+      assert.match(client.getInstructions() ?? '', /get_screen_definition[\s\S]*get_screen_flows/);
 
       const call = async (name: string, args: Record<string, unknown>) => {
         const result = await client.callTool({ name, arguments: args });

@@ -65,8 +65,38 @@ function run(action: () => string): ToolResult {
   }
 }
 
+// Sent to the client on initialize: how to read the output of the screen tools.
+export const INSTRUCTIONS = `swiftgraph answers questions about a Swift codebase from a prebuilt graph (read-only, offline). Call graph_overview first.
+
+Screens: get_screen_definition tells what a screen shows and where each value comes from; get_screen_flows tells what runs from each entry point. Both return compact text by default. How to read it:
+
+Common
+- First line: Screen [kind] @file:line. "@file:line" is a source location; "@:N" is line N of the last file named above.
+- "#" lines are a legend: "# api = <host>" (paths below are relative to it), "# vm = <type>" ("vm." means that view model), "# di: Protocol → Impl file:line" (DI bindings used).
+- "#N" is an item of the screen; "Cell#N (in #M)" is an item of a child view, cell or row shown inside item #M; "#1–#6" is a range. Pass ids as item (get_screen_definition) or entry (get_screen_flows).
+- "⚠" marks a likely bug found statically. Confirm it with get_source before reporting it.
+- "More: ..." names options that add detail.
+
+get_screen_definition
+- "state:" properties that hold screen data; "children:" child views, cells, rows and the item they belong to.
+- ITEMS columns: id | line | kind (UI type) | dir (display, input, action, list) | when (condition for the item to show; empty = always) | datasource.
+- datasource: "GET /path field" (API response field; items[].x = field of each element, JSON key as written in the response); userDefaults/keychain/file "key"; localization "key" ("missing en" = no translation); "error GET /path" (message of a caught error of that request); "vm.x" (variable bound to an input) with its placeholder.
+- SUMMARY, one line per source: api (endpoint, response type, fields used), local, file, error, localization (key count, missing languages), input ("not read elsewhere" = value never used), unresolved (values not traced: the answer may be incomplete).
+- detail=true adds DATA: for each item its sources and the path "→ A [Layer] → B [Layer]" from the source up to the view; "from:" inputs of a computed value; "value:" where a stored value comes from. It also adds CONDITIONS.
+
+get_screen_flows (default: data view)
+- "F<n> <kind> <trigger> @file:line" starts a flow. kind: create (init), action (tap; #N is the item), appear, task, lifecycle (viewDidLoad...), refresh, change, receive.
+- Numbered steps are the gets and sets of data in execution order: "read <store> \\"key\\"", "write <store> \\"key\\" ← value", "GET /path → Type" (request), "set vm.x ← value" (view-model write); "(→ #3)" = items that show the value.
+- Under a request, "success" and "failure" list what changes: "vm.x ← field → #1" (response field stored in the view model, shown by item #1); indented ".name ← items[].product_name" = field mapping after map; "(formatted)" = value transformed; "catch ... →" = the catch branch that runs.
+- "errors:" how failures are handled; "try? → x ⚠ error ignored" and "⚠ no error handling on this flow" = failures are lost.
+- "⚠ stops: <reason>" the flow cannot go past this step; "⚠ never runs: <reason>" an unreachable write; "⚠ empty" a handler with an empty body.
+- "No data access: F2" = flows that read and write no data.
+- calls=true: the numbered calls through the layers; "[Layer]" is written only when the layer changes; "(Mapper = X)" generic bindings; "a → map {…} → sink" Combine chains; "success/failure → N" = step N handles the result; "writes" = view-model properties set. until="Repository": every step down to that layer, deeper calls folded into it as "(→ api …)". layers=[...]: only those layers. steps=true: every step.
+
+Start narrow (item, entry, sources, include_children=false) and add detail, calls or steps only when needed.`;
+
 export function createServer(db: Db, root: string): McpServer {
-  const server = new McpServer({ name: 'swiftgraph', version: '0.0.1' });
+  const server = new McpServer({ name: 'swiftgraph', version: '0.0.1' }, { instructions: INSTRUCTIONS });
   const readOnly = { readOnlyHint: true, openWorldHint: false };
 
   server.registerTool(
