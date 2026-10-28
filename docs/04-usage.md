@@ -160,10 +160,12 @@ swiftgraph define LoginView                         # item của màn hình, ngu
 swiftgraph define ProductListViewController --source api,local
 swiftgraph define LoginView --item LoginView#5      # một item, in đủ đường đi
 swiftgraph define LoginView --detail                # thêm DATA (đường đi của từng giá trị) và CONDITIONS
-swiftgraph define LoginView --format compact        # ít token nhất (mặc định của tool MCP)
+swiftgraph define LoginView --format compact        # ít token nhất (mặc định của tool MCP); --format pretty: căn cột cho người đọc
 swiftgraph define LoginView --format json           # hoặc markdown
-swiftgraph flows LoginView                          # các luồng xử lý (rút gọn): path, success + mapping field, failure, stores
+swiftgraph flows LoginView                          # mỗi bước là get/set dữ liệu (API, storage, biến ViewModel), success/failure đổi dữ liệu gì
+swiftgraph flows LoginView --calls                  # các lời gọi qua từng lớp, đánh số
 swiftgraph flows LoginView --steps                  # mọi bước theo thứ tự thực thi
+swiftgraph flows LoginView --until Repository       # từ view tới Repository, giữ mọi logic và mapping ở giữa
 swiftgraph flows LoginView --layers ViewModel,Repository   # chỉ tác động giữa ViewModel và Repository
 swiftgraph flows LoginView --entry LoginView#5      # luồng của một item (id từ define) hoặc LoginView/F2
 swiftgraph flows LoginView --format mermaid         # sequence diagram theo lớp kiến trúc
@@ -171,7 +173,7 @@ swiftgraph flows LoginView --format mermaid         # sequence diagram theo lớ
 
 Tool MCP tương ứng: `get_screen_definition`, `get_screen_flows`; mặc định trả `compact`.
 
-Tiết kiệm token khi agent đọc: hỏi hẹp (`--item`, `--entry`, `--source api`, `--no-children`), dùng `compact`, chỉ thêm `--detail`/`--steps` khi cần. `compact` bỏ căn cột, ghi file một lần cho các dòng liên tiếp (`@:49`), và đưa host API, view model, binding DI lên legend đầu output (`# api = https://api.example.com`, `# vm = ProductListViewModel`, `# di: …`). Trên fixture, `define` còn 17–31% và `flows` còn 58–66% kích thước bản trước.
+Tiết kiệm token khi agent đọc: hỏi hẹp (`--item`, `--entry`, `--source api`, `--no-children`), dùng `compact`, chỉ thêm `--detail`/`--steps` khi cần. `text` (mặc định) và `compact` đều không căn cột, ghi file một lần cho các dòng liên tiếp (`@:49`), đưa host API, view model, binding DI lên legend đầu output (`# api = https://api.example.com`, `# vm = ProductListViewModel`, `# di: …`), chỉ ghi tag lớp khi lớp đổi và bỏ tên màn hình trước method của nó; `compact` thụt lề 1 khoảng và bỏ dòng gợi ý. `--format pretty` in bản căn cột. Trên fixture, so với `pretty`: `define` còn 55–80%, `flows` còn 50–65%.
 
 Kiến trúc của dự án khai báo trong `swiftgraph.json` ở gốc repo (không bắt buộc). Không có file thì preset được chọn theo `import` của dự án: `swiftui`, `uikit`, `combine`, `alamofire`, `swinject`, `coredata`, `swiftdata` khi có import tương ứng; `concurrency`, `foundation-storage`, `mvvm-clean` luôn bật. Ví dụ khai báo wrapper Keychain riêng:
 

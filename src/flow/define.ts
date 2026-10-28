@@ -325,10 +325,12 @@ class Definer {
         if (sink.rule.direction === 'list') listItems.set(`${frame.file.path}:${sink.call}`, item.id);
         for (const inner of sinks.filter((candidate) => folded.get(candidate.call) === sink)) {
           const innerArguments = inner.rule.arguments ?? {};
+          // The text of a view inside a content closure takes that closure's role: a button's `label`, an alert's `message`.
+          const contentRole = this.contentRoleOf(sink, inner, frame) ?? 'label';
           for (const [position, argument] of inner.site.arguments.entries()) {
             const spec = this.argumentSpec(innerArguments, inner.aligned[position], position);
             if (!spec || spec.direction === 'action') continue;
-            item.data.push(this.data(spec.role === 'text' ? 'label' : spec.role, spec, argument.value, inner.frame, inner.site));
+            item.data.push(this.data(spec.role === 'text' ? contentRole : spec.role, spec, argument.value, inner.frame, inner.site));
           }
         }
         this.items.push(item);
@@ -395,6 +397,18 @@ class Definer {
     return result;
   }
 
+  /** Role of the content closure of `outer` that contains `inner`. */
+  private contentRoleOf(outer: SinkMatch, inner: SinkMatch, frame: Frame): string | undefined {
+    const closures = this.ancestors(frame.file.facts, inner.call)
+      .filter((ancestor) => ancestor.call === outer.call)
+      .map((ancestor) => ancestor.closure);
+    for (const [position, argument] of outer.site.arguments.entries()) {
+      if (argument.value.kind !== 'closure' || !closures.includes(argument.value.closure)) continue;
+      return this.argumentSpec(outer.rule.arguments ?? {}, outer.aligned[position], position)?.role;
+    }
+    return undefined;
+  }
+
   private contentClosures(sink: SinkMatch): number[] {
     const result: number[] = [];
     for (const [position, argument] of sink.site.arguments.entries()) {
@@ -443,6 +457,11 @@ class Definer {
     for (const [position, argument] of sink.site.arguments.entries()) {
       const spec = this.argumentSpec(sink.rule.arguments ?? {}, sink.aligned[position], position);
       if (!spec || spec.content) continue;
+      // `isPresented: $viewModel.showsError`: the item shows while the value is true.
+      if (spec.role === 'shown') {
+        item.shownWhen = [...item.shownWhen, this.engine.render(argument.value, sink.frame.file.facts).replace(/^\$/, '')];
+        continue;
+      }
       item.data.push(this.data(spec.role, spec, argument.value, sink.frame, sink.site));
     }
     return item;

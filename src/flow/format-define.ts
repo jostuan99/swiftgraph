@@ -4,7 +4,7 @@ import { sourceGroup, type ConditionWrite, type ItemData, type ScreenDefinition,
 import { compactText } from './compact.ts';
 import { tyText, type Location, type Step, type Traced } from './engine.ts';
 
-export type DefineFormat = 'text' | 'compact' | 'json' | 'markdown';
+export type DefineFormat = 'text' | 'compact' | 'pretty' | 'json' | 'markdown';
 
 export interface FormatOptions {
   /** Repository root given on the command line, repeated in the `flows` hints. */
@@ -18,15 +18,14 @@ export interface FormatOptions {
 export function formatDefinition(definition: ScreenDefinition, format: DefineFormat, options: FormatOptions = {}): string {
   if (format === 'json') return JSON.stringify(definitionJson(definition), null, 2);
   if (format === 'markdown') return markdown(definition, options);
-  if (format === 'compact') {
-    compactMode = true;
-    try {
-      return compactText(text(definition, options));
-    } finally {
-      compactMode = false;
-    }
+  // `pretty` aligns columns for people; `text` and `compact` spend fewer tokens.
+  if (format === 'pretty') return text(definition, options);
+  compactMode = true;
+  try {
+    return compactText(text(definition, options), { tight: format === 'compact' });
+  } finally {
+    compactMode = false;
   }
-  return text(definition, options);
 }
 
 // --- Shared text ---------------------------------------------------------------------
@@ -272,7 +271,11 @@ function text(definition: ScreenDefinition, options: FormatOptions): string {
   const view = definition.view;
   const lines: string[] = [];
   const root = options.rootArgument ? ` --root ${options.rootArgument}` : '';
-  lines.push(`${view.name}  [${view.kind}${view.layer ? `, layer ${view.layer}` : ''}]  ${view.file}:${view.line}`);
+  lines.push(
+    compactMode
+      ? `${view.name} [${view.kind}${view.layer && view.layer !== 'View' ? `, ${view.layer}` : ''}] ${view.file}:${view.line}`
+      : `${view.name}  [${view.kind}${view.layer ? `, layer ${view.layer}` : ''}]  ${view.file}:${view.line}`,
+  );
   const state = new Columns();
   for (const entry of definition.state) {
     state.add(
@@ -287,7 +290,9 @@ function text(definition: ScreenDefinition, options: FormatOptions): string {
     lines.push(`  state:     ${rendered[0]}`, ...rendered.slice(1).map((line) => `             ${line}`));
   }
   lines.push(
-    `  children:  ${definition.children.length === 0 ? 'none' : definition.children.map((child) => `${child.name} (${child.how}, ${where(child.at)})`).join('; ')}`,
+    compactMode
+      ? `  children: ${definition.children.length === 0 ? 'none' : definition.children.map((child) => `${child.name} (${child.how.replaceAll(`${view.name}#`, '#')})`).join('; ')}`
+      : `  children:  ${definition.children.length === 0 ? 'none' : definition.children.map((child) => `${child.name} (${child.how}, ${where(child.at)})`).join('; ')}`,
   );
 
   lines.push('', `ITEMS (${definition.items.length})`);
@@ -446,11 +451,16 @@ function summary(definition: ScreenDefinition): string[] {
       add(group, `${origin.kind === 'unresolved' ? origin.reason : ''} (${where(origin.at)})`);
     } else if (group !== 'literal' && origin.kind === 'source') {
       // One entry per endpoint (or key) and API, with the fields read from it.
-      const head = describeOrigin({ ...traced, fields: [], jsonKey: undefined, type: undefined }).replace(/^\S+\s+/, '');
+      const lean = compactMode && origin.source === 'api' && origin.endpoint !== undefined;
+      const head = lean
+        ? `${origin.method ?? 'GET'} ${origin.endpoint} ${origin.type ? tyText(origin.type) : ''}`.trimEnd()
+        : describeOrigin({ ...traced, fields: [], jsonKey: undefined, type: undefined }).replace(/^\S+\s+/, '');
       const fields =
-        traced.fields.length > 0
-          ? `${fieldText(traced.fields)}${traced.type ? `: ${tyText(traced.type)}` : ''}${traced.jsonKey ? ` ${quote(traced.jsonKey)}` : ''}`
-          : '';
+        traced.fields.length === 0
+          ? ''
+          : lean
+            ? `${traced.jsonPath ? jsonPathText(traced.jsonPath) : fieldText(traced.fields).slice(1)}${traced.type ? `: ${tyText(traced.type)}` : ''}`
+            : `${fieldText(traced.fields)}${traced.type ? `: ${tyText(traced.type)}` : ''}${traced.jsonKey ? ` ${quote(traced.jsonKey)}` : ''}`;
       const entries = fieldGroups.get(`${group}|${head}`) ?? new Set<string>();
       if (fields) entries.add(fields);
       fieldGroups.set(`${group}|${head}`, entries);

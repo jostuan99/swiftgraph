@@ -152,10 +152,12 @@ test('define and flows: a screen split into components and extensions in several
       assert.deepEqual(
         view.definition.items.map((item) => `${item.id} ${item.path.join(' > ')} | ${datasource(item)}`),
         [
-          'ProfileView#1 header > HStack > Text | GET https://api.example.com/v1/me display_name',
-          'ProfileView#2 settings > Toggle | userDefaults "notificationsEnabled"',
-          'ProfileView#3 settings > TextField | ProfileViewModel.nickname; label localization "profile.nickname" (en "Nickname", missing ja); placeholder localization "profile.nickname.placeholder" (en "Enter a nickname", ja "ニックネームを入力")',
-          'ProfileView#4 settings > Button | localization "profile.logout"',
+          'ProfileView#1 alert | error GET https://api.example.com/v1/me',
+          'ProfileView#2 Button | localization "common.ok"',
+          'ProfileView#3 header > HStack > Text | GET https://api.example.com/v1/me display_name',
+          'ProfileView#4 settings > Toggle | userDefaults "notificationsEnabled"',
+          'ProfileView#5 settings > TextField | ProfileViewModel.nickname; label localization "profile.nickname" (en "Nickname", missing ja); placeholder localization "profile.nickname.placeholder" (en "Enter a nickname", ja "ニックネームを入力")',
+          'ProfileView#6 settings > Button | localization "profile.logout"',
           'PointsBadge#1 VStack > PointsBadge > Label | GET https://api.example.com/v1/me points',
           'AvatarView#1 header > HStack > AvatarView > AsyncImage | GET https://api.example.com/v1/me avatar_url',
         ],
@@ -172,6 +174,17 @@ test('define and flows: a screen split into components and extensions in several
       assert.equal(
         datasource(controllerPlaceholder.definition.items.find((item) => item.kind === 'UITextField')!),
         'placeholder localization "profile.nickname.placeholder" (en "Enter a nickname", ja "ニックネームを入力")',
+      );
+      // The alert shows while `showsError` is true, with the error of the request as its message.
+      assert.deepEqual(view.definition.items[0]!.shownWhen, ['viewModel.showsError']);
+      const profileFlows = screenFlows(engine, 'ProfileView');
+      assert.ok('flows' in profileFlows);
+      const [created, task] = profileFlows.flows.flows;
+      // A read of a datasource names the variable it fills; the request's failure sets the alert.
+      assert.equal(created!.summary.data[0]!.text, 'ProfileViewModel.notificationsEnabled ← read userDefaults "notificationsEnabled"');
+      assert.deepEqual(
+        task!.summary.data[0]!.failure.map((outcome) => `${outcome.target} ← ${outcome.value}`),
+        ['ProfileViewModel.errorMessage ← error.localizedDescription', 'ProfileViewModel.showsError ← true'],
       );
       // UIKit: setup and bindings in extensions of the view controller.
       const controller = defineScreen(engine, 'ProfileViewController');
@@ -249,7 +262,7 @@ test('flows: entry points of a screen and their steps through the layers', async
       assert.equal(sink.async, true);
       assert.ok(lifecycle.some((candidate) => candidate.kind === 'write' && candidate.text === 'titleLabel.text = title'));
 
-      // Error handling of the refresh: both catch blocks; the profile flow ignores its error with `try?`.
+      // Error handling of the refresh: both catch blocks; the profile flow shows an alert on failure.
       assert.deepEqual(flows[0]!.errors, [
         'catch let error as AFError → ProductListViewModel.errorMessage = error.errorDescription',
         'catch → ProductListViewModel.rows = []',
@@ -257,7 +270,7 @@ test('flows: entry points of a screen and their steps through the layers', async
       ]);
       const profile = screenFlows(engine, 'ProfileView');
       assert.ok('flows' in profile);
-      assert.ok(profile.flows.flows.some((flow) => flow.errors.includes('ProfileServiceImpl.profile(): ⚠ error ignored (try?)')));
+      assert.ok(profile.flows.flows.some((flow) => flow.errors.includes('catch → ProfileViewModel.showsError = true')));
       // Summary: success with the mapping from JSON fields, failure from the catch blocks.
       const summary = flows[0]!.summary;
       assert.deepEqual(summary.path.slice(-3), [
@@ -280,15 +293,42 @@ test('flows: entry points of a screen and their steps through the layers', async
         ],
       );
       assert.deepEqual(summary.stores, ['userDefaults "lastUpdated"  (UserDefaults.set)']);
+      // Data view: one step per get/set of data, the layers in between left out.
+      assert.deepEqual(
+        summary.data.map((step) => `${step.number} ${step.kind} ${step.text}`),
+        [
+          '1 viewModel ProductListViewModel.errorMessage ← nil',
+          '2 keychain read keychain "accessToken"',
+          '3 api GET https://api.example.com/v1/products → ProductListResponse',
+          '4 userDefaults write userDefaults "lastUpdated" ← Date()',
+        ],
+      );
+      assert.deepEqual(
+        summary.data[2]!.success.map((outcome) => outcome.target),
+        ['ProductListViewModel.title', 'ProductListViewModel.rows', 'ProductListViewModel.lastUpdated'],
+      );
+      assert.equal(summary.data[2]!.failure.length, 3);
       // Numbered steps: success and failure sit on the request that can fail.
       const request = summary.steps.find((step) => step.text.startsWith('GET https://api.example.com/v1/products'))!;
-      assert.equal(request.number, 6);
+      assert.equal(request.number, 7);
       assert.equal(request.failable, true);
       assert.ok(request.success.some((outcome) => outcome.target === 'ProductListViewModel.rows'));
       assert.equal(request.failure.length, 3);
       assert.deepEqual(
         summary.steps.map((step) => `${step.number} ${step.depth} ${step.layer}`),
-        ['1 0 View', '2 1 ViewModel', '3 2 Repository', '4 3 Service', '5 4 keychain', '6 4 api', '7 2 Storage', '8 3 userDefaults'],
+        // The Task, and the `map` that builds the rows from the response, are steps too.
+        [
+          '1 0 View',
+          '2 1 View',
+          '3 2 ViewModel',
+          '4 3 Repository',
+          '5 4 Service',
+          '6 5 keychain',
+          '7 5 api',
+          '8 3 ViewModel',
+          '9 3 Storage',
+          '10 4 userDefaults',
+        ],
       );
       // Only the view model and the repository: the request becomes a note of the repository step, with its outcomes.
       const layered = screenFlows(engine, 'ProductListViewController', { layers: ['ViewModel', 'repository'] });
@@ -314,7 +354,10 @@ test('flows: entry points of a screen and their steps through the layers', async
       golden('ProductListViewController.flows-compact.txt', compact + '\n');
       // Compact: the API host, the view model and DI bindings once in the legend; no column padding.
       assert.ok(compact.includes('# api = https://api.example.com') && compact.includes('# vm = ProductListViewModel'));
-      assert.ok(compact.includes('GET /v1/products') && !/\S {2,}/.test(compact));
+      // Padding only as nesting: at the start of a line or right after a step number.
+      assert.ok(
+        compact.includes('GET /v1/products') && compact.split('\n').every((line) => !/\S {2,}/.test(line.replace(/^\s*\d+ +/, ''))),
+      );
       assert.match(
         flowsText(db, root, { screen: 'ProductListView', entry: 'ProductListView/F2', format: 'mermaid' }),
         /View->>ViewModel: await ProductListViewModel.reload\(\)/,
@@ -360,6 +403,37 @@ test(
 
         golden('LoginView.define.txt', defineText(db, root, { screen: 'LoginView' }) + '\n', 'custom-clean-app');
         golden('LoginView.flows.txt', flowsText(db, root, { screen: 'LoginView' }) + '\n', 'custom-clean-app');
+        // View → Repository with everything in between: the subscription that handles the response and the mapper behind the cast.
+        const until = screenFlows(engine, 'LoginView', { entry: 'LoginView#5', until: 'Repository' });
+        assert.ok('flows' in until);
+        const untilSteps = until.flows.flows[0]!.summary.steps;
+        assert.deepEqual(
+          untilSteps.map((step) => `${step.number} ${step.layer} ${step.text}`),
+          [
+            '1 ViewModel LoginViewModel.anonymousSession()',
+            '2 UseCase LoginUseCaseImpl.anonymous(_:)',
+            '3 Mapper AnonymousEntityMapper.init()',
+            '4 Repository LoginRepositoryImpl.anonymousSession(_:)',
+            '5 UseCase sink async',
+            '6 Mapper AnonymousViewModelMapper.mapping(_:)',
+          ],
+        );
+        assert.equal(untilSteps[3]!.handledBy, 5);
+        assert.ok(untilSteps[3]!.notes.includes('→ api JSONDecoder.decode(AnonymousSession)'));
+        assert.equal(untilSteps[5]!.when, 'let domain = domain as? Mapper.EntityResult');
+        golden(
+          'LoginView.flows-until-repository.txt',
+          flowsText(db, root, { screen: 'LoginView', until: 'Repository', format: 'compact' }) + '\n',
+          'custom-clean-app',
+        );
+        // Failure handlers that change no data are left out of the data view.
+        const loginData = screenFlows(engine, 'LoginView', { entry: 'LoginView#5' });
+        assert.ok('flows' in loginData);
+        const decode = loginData.flows.flows[0]!.summary.data;
+        assert.equal(decode.length, 1);
+        assert.deepEqual(decode[0]!.failure, []);
+        assert.ok(decode[0]!.success[0]!.never?.startsWith('cast AnonymousSession → String always fails'));
+        golden('LoginView.flows-calls.txt', flowsText(db, root, { screen: 'LoginView', calls: true }) + '\n', 'custom-clean-app');
         golden('LoginView.flows-steps.txt', flowsText(db, root, { screen: 'LoginView', steps: true }) + '\n', 'custom-clean-app');
         // The Login action stops at the cast that always fails: `.main` is never written.
         const login = screenFlows(engine, 'LoginView', { entry: 'LoginView#5' });

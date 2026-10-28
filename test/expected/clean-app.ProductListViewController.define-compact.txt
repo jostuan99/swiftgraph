@@ -1,7 +1,7 @@
-ProductListViewController [UIViewController, layer View] @Sources/CleanApp/Presentation/ProductListViewController.swift:4
+ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:4
 # api = https://api.example.com
  state: viewModel: ProductListViewModel @ProductListViewController.swift:5
- children: ProductCell (cell of ProductListViewController#5, ProductListViewController.swift:24)
+ children: ProductCell (cell of #5)
 
 ITEMS (7)
  id | line | kind | dir | when | datasource
@@ -14,11 +14,10 @@ ITEMS (7)
  ProductCell#2 (in #5) | :73 | UILabel | display | | GET /v1/products items[].price
 
 SUMMARY
- api GET "/v1/products" → serializingDecodable → ProductListResponse .title: String "title", .items: [ProductDTO] "items", .items[].name: String "product_name", .items[].price: Decimal "price"
+ api GET /v1/products ProductListResponse title: String, items: [ProductDTO], items[].product_name: String, items[].price: Decimal
  local "lastUpdated" UserDefaults.object → Any?
  file JSONDecoder.decode → [ProductDTO] [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")" Data(contentsOf:) → Data
  error GET /v1/products
  localization Localizable: 1 key
  unresolved none
 
-More: --detail (DATA, CONDITIONS) or --item <id>

@@ -38,6 +38,8 @@ export interface FlowsRequest extends FlowsOptions {
   screen: string;
   /** Every step instead of the summary. */
   steps?: boolean;
+  /** The numbered calls through the layers instead of the data view (implied by `until` and `layers`). */
+  calls?: boolean;
   format?: FlowsFormat;
   budget?: number;
 }
@@ -48,6 +50,9 @@ export function flowsText(db: Db, root: string, request: FlowsRequest): string {
   const result = screenFlows(engine, request.screen, request);
   if ('candidates' in result) return [result.message, ...result.candidates.map((candidate) => `  ${candidate}`)].join('\n');
   const format = request.format ?? 'text';
-  const output = formatFlows(result.flows, format, { steps: request.steps === true });
+  const output = formatFlows(result.flows, format, {
+    steps: request.steps === true,
+    calls: request.calls === true || request.until !== undefined || (request.layers?.length ?? 0) > 0,
+  });
   return format === 'json' || request.budget === undefined ? output : clipToBudget(output, request.budget);
 }

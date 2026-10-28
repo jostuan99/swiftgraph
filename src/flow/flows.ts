@@ -22,6 +22,11 @@ export interface FlowsOptions {
    * step kept above them; flows with no such step are left out.
    */
   layers?: string[];
+  /**
+   * Keep every step from the entry down to the steps of this layer
+   * (`Repository`); what runs below them collapses into them.
+   */
+  until?: string;
 }
 
 export interface FlowStep {
@@ -42,6 +47,8 @@ export interface FlowStep {
   mapping?: WriteMapping;
   /** For `write`: layer of the type that owns the written property. */
   targetLayer?: string;
+  /** A subscription to a publisher (`sink`): its closures run when the publisher emits or completes. */
+  subscribes?: true;
 }
 
 export interface WriteMapping {
@@ -63,6 +70,27 @@ export interface FlowSummary {
   /** Data written to storage: `userDefaults "lastUpdated" ← Date()`. */
   stores: string[];
   warnings: string[];
+  /** The flow as data access: one step per get/set of a datasource or view-model variable. */
+  data: DataStep[];
+}
+
+/**
+ * One access to data: a request, a read or write of a store, or a write of a
+ * view-model variable. A request carries the view-model and datasource
+ * changes made on its success and its failure.
+ */
+export interface DataStep {
+  number: number;
+  /** `api`, `keychain`, `userDefaults`, `file`, `coreData`, `swiftData`, a project kind, or `viewModel`. */
+  kind: string;
+  /** `GET https://…/products → ProductListResponse`, `read "accessToken"`, `vm.errorMessage ← nil`. */
+  text: string;
+  notes: string[];
+  at: Location;
+  success: FlowOutcome[];
+  failure: FlowOutcome[];
+  /** Where the flow stops (a cast that always fails). */
+  stops?: string;
 }
 
 export interface SummaryStep {
@@ -81,6 +109,10 @@ export interface SummaryStep {
   writes: FlowOutcome[];
   /** The flow goes no further: a cast that always fails. */
   stops?: string;
+  /** Condition under which the step runs (`if let domain = domain as? Mapper.EntityResult`). */
+  when?: string;
+  /** Number of the step that handles this request's value and failure (a subscription). */
+  handledBy?: number;
 }
 
 export interface FlowOutcome {
@@ -101,6 +133,8 @@ export interface FlowOutcome {
   nested?: boolean;
   /** The error of this call is dropped with `try?`. */
   ignored?: boolean;
+  /** Layer of the type that owns the written property (`ViewModel`). */
+  targetLayer?: string;
 }
 
 export interface ScreenFlow {
@@ -135,6 +169,9 @@ export function screenFlows(engine: FlowEngine, text: string, options: FlowsOpti
   const result = new FlowBuilder(engine, definition, options).build(picked.type);
   if (options.entry) {
     result.flows = result.flows.filter((flow) => flow.id === options.entry || flow.item === options.entry);
+  }
+  if (options.until) {
+    for (const flow of result.flows) flow.summary = collapseBelow(flow.summary, options.until.toLowerCase());
   }
   if (options.layers && options.layers.length > 0) {
     const layers = new Set(options.layers.map((layer) => layer.toLowerCase()));
@@ -246,7 +283,9 @@ class FlowBuilder {
                   aligned,
                   site.arguments.map((argument) => argument.label),
                 );
-          const value = site.arguments[position]?.value;
+          // A label the call does not write (`Button("Log out") { … }`): the closure is the trailing one.
+          const closures = site.arguments.filter((argument) => argument.value.kind === 'closure');
+          const value = position >= 0 ? site.arguments[position]?.value : closures.at(-1)?.value;
           if (value?.kind !== 'closure') continue;
           const item = this.itemAt(frame.file.path, site.line, site.name);
           const title = item
@@ -340,7 +379,7 @@ class FlowBuilder {
       writes: [],
       shown: [],
       errors: [],
-      summary: { steps: [], path: [], success: [], failure: [], stores: [], warnings: [] },
+      summary: { steps: [], path: [], success: [], failure: [], stores: [], warnings: [], data: [] },
     };
     if (item) flow.item = item;
     return flow;
@@ -360,6 +399,7 @@ class FlowBuilder {
     flow.shown = flow.writes.map((write) => ({ property: write.property, items: this.shownBy.get(write.property) ?? [] }));
     flow.errors = errorHandling(flow.steps);
     flow.summary = summarize(flow.steps, this.shownBy);
+    flow.summary.data = dataSteps(flow.summary);
     this.flows.push(flow);
   }
 
@@ -438,6 +478,22 @@ class Walker {
         notes: [],
         warnings: [...new Set(traced.flatMap((result) => result.warnings)), ...ignored(site)],
       });
+      // Where a read value goes: the property initialized or assigned with it.
+      if (source.rule.direction !== 'write') {
+        const into =
+          frame.info?.declaration.kind === 'property'
+            ? frame.info
+            : (() => {
+                const assignment = facts.flow.assignments.find(
+                  (candidate) =>
+                    candidate.line === site.line &&
+                    candidate.from === (frame.info?.declaration.localId ?? null) &&
+                    candidate.target.kind === 'path',
+                );
+                return assignment?.target.kind === 'path' ? this.propertyOf(assignment.target, frame) : undefined;
+              })();
+        if (into) step.notes.push(`into ${engine.symbolName(into)}`);
+      }
       const keyArgument =
         source.rule.key === undefined
           ? undefined
@@ -449,7 +505,27 @@ class Walker {
               )
             ]?.value;
       if (keyArgument?.kind === 'literal' && origin?.kind !== 'source') step.notes.push(`key ${JSON.stringify(keyArgument.value)}`);
-      if (source.rule.direction === 'write') step.notes.push('write');
+      if (source.rule.direction === 'write') {
+        step.notes.push('write');
+        // The value stored, by where it comes from: `Date()`, `vm.token`.
+        const written =
+          source.rule.value === undefined
+            ? undefined
+            : site.arguments[
+                argumentIndex(
+                  source.rule.value,
+                  source.aligned,
+                  site.arguments.map((argument) => argument.label),
+                )
+              ]?.value;
+        if (written) {
+          const origin = engine.trace(written, frame)[0];
+          const text = origin ? (mappingSource(origin)[0] ?? '') : '';
+          step.notes.push(
+            `value ${text && !text.startsWith('unresolved') ? text.replace(/^literal /, '') : engine.render(written, facts)}`,
+          );
+        }
+      }
       if (origin?.kind === 'source') {
         if (origin.endpoint) step.notes.push(`${origin.method ? `${origin.method} ` : ''}${JSON.stringify(origin.endpoint)}`);
         if (origin.key) step.notes.push(`key ${JSON.stringify(origin.key)}`);
@@ -467,7 +543,15 @@ class Walker {
         .filter(({ argument }) => argument.value.kind === 'closure');
       const receiver =
         site.receiver?.kind === 'path' && site.receiver.root.kind !== 'call' ? `${engine.render(site.receiver, facts)}.` : '';
-      const step = this.push({ depth, kind: 'chain', text: `${receiver}${site.name}`, layer, at, when, notes: [], warnings: [] });
+      // An operator with what it does to the data: `compactMap { jsonData.data(using: .utf8) }`, `Just(())`.
+      const values = site.arguments
+        .filter((argument) => argument.value.kind !== 'closure')
+        .map((argument) => engine.render(argument.value, facts));
+      const bodies = closures
+        .map(({ argument }) => (argument.value.kind === 'closure' ? engine.render(argument.value, facts) : ''))
+        .filter((text) => text !== '' && text !== '{ … }');
+      const operator = `${site.name}${values.length > 0 ? `(${values.join(', ')})` : ''}${bodies.length > 0 ? ` ${bodies.join(' ')}` : ''}`;
+      const step = this.push({ depth, kind: 'chain', text: `${receiver}${operator}`, layer, at, when, notes: [], warnings: [] });
       const asyncClosures: { label: string; closure: number; on?: string }[] = [];
       for (const { argument, position } of closures) {
         if (argument.value.kind !== 'closure') continue;
@@ -482,7 +566,8 @@ class Walker {
       if (asyncClosures.length > 0) {
         step.kind = 'closure';
         step.async = true;
-        step.text = `${receiver}${site.name}  async${asyncClosures.some((closure) => closure.on === 'value' || closure.on === 'completion') ? ' (after the publisher emits)' : ''}`;
+        step.text = `${receiver}${site.name} async`;
+        if (asyncClosures.some((closure) => closure.on === 'value' || closure.on === 'completion')) step.subscribes = true;
         for (const closure of asyncClosures) {
           this.push({ depth: depth + 1, kind: 'closure', text: `on ${closure.on ?? closure.label}:`, at, notes: [], warnings: [] });
           this.body(frame, closure.closure, depth + 2, stack);
@@ -728,7 +813,7 @@ function unwrapTy(type: Ty | undefined): Ty | undefined {
 
 /** The short form of a flow (see `FlowSummary`). */
 function summarize(steps: FlowStep[], shownBy: Map<string, string[]>): FlowSummary {
-  const summary: FlowSummary = { steps: [], path: [], success: [], failure: [], stores: [], warnings: [] };
+  const summary: FlowSummary = { steps: [], path: [], success: [], failure: [], stores: [], warnings: [], data: [] };
   let current: SummaryStep | undefined;
   let failable: SummaryStep | undefined;
   let ignoredNext = false;
@@ -747,6 +832,7 @@ function summarize(steps: FlowStep[], shownBy: Map<string, string[]>): FlowSumma
       writes: [],
     };
     if (layer) entry.layer = layer;
+    if (step.when) entry.when = step.when;
     summary.steps.push(entry);
     stack.push({ depth: step.depth, entry, owner: step.kind !== 'source' });
     current = entry;
@@ -778,9 +864,25 @@ function summarize(steps: FlowStep[], shownBy: Map<string, string[]>): FlowSumma
       failureLabel = 'on failure';
       continue;
     }
-    if (step.kind === 'closure' && step.async && failureDepth === undefined && deadDepth === undefined && /\.\w+\s+async/.test(step.text)) {
-      // A subscription (`viewModel.$title.sink`): what it does runs each time the publisher emits.
+    if (
+      step.kind === 'chain' &&
+      failureDepth === undefined &&
+      deadDepth === undefined &&
+      (step.text.includes(' → ') || step.text.includes('{'))
+    ) {
+      // Operators that transform the data (`Just(()) → compactMap { … } → tryMap { … }`).
       number(step, step.text, step.layer);
+      continue;
+    }
+    if (step.kind === 'closure' && step.async && failureDepth === undefined && deadDepth === undefined && /\basync\b/.test(step.text)) {
+      // A subscription (`viewModel.$title.sink`): what it does runs each time the publisher emits.
+      const subscription = number(step, step.text, step.layer);
+      // A subscription to a request handles its value and its failure: outcomes from here on belong to it.
+      if (failable && step.subscribes) {
+        subscription.failable = true;
+        failable.handledBy = subscription.number;
+        failable = subscription;
+      }
       continue;
     }
     const when = step.when ?? '';
@@ -802,10 +904,9 @@ function summarize(steps: FlowStep[], shownBy: Map<string, string[]>): FlowSumma
     if (step.kind === 'write') {
       const [target, value] = [step.text.slice(0, step.text.indexOf(' = ')), step.text.slice(step.text.indexOf(' = ') + 3)];
       const shown = step.property ? (shownBy.get(step.property) ?? []) : [];
-      // Internal state of other layers (a mapper's request) is not what the screen shows.
-      if (step.property && shown.length === 0 && step.targetLayer !== 'ViewModel') continue;
       if (value === 'self') continue;
       const outcome: FlowOutcome = { target, value, shown, at: step.at };
+      if (step.targetLayer) outcome.targetLayer = step.targetLayer;
       if (step.mapping) outcome.mapping = step.mapping;
       const condition = failure ? label : when;
       if (condition) outcome.when = condition;
@@ -886,6 +987,135 @@ function summarize(steps: FlowStep[], shownBy: Map<string, string[]>): FlowSumma
   return summary;
 }
 
+/** Kinds of source steps that are not data of the app (resources). */
+const NOT_DATA = new Set(['localization']);
+
+/**
+ * A changed view-model variable: what the data view keeps of an outcome.
+ * Objects the view model creates for itself (a mapper, a coordinator) are
+ * not data unless a view shows them.
+ */
+function changesData(outcome: FlowOutcome): boolean {
+  if (outcome.value === '' || outcome.targetLayer !== 'ViewModel') return false;
+  return outcome.shown.length > 0 || !/^(\.?init\(|[A-Z]\w*\()/.test(outcome.value);
+}
+
+/**
+ * The flow as data access (see `DataStep`): datasource steps and writes of
+ * view-model variables, in order; the layers in between are left out.
+ * Outcomes of a request handled elsewhere (a subscription) stay with the
+ * request; outcomes that change no data are dropped.
+ */
+function dataSteps(summary: FlowSummary): DataStep[] {
+  const steps: DataStep[] = [];
+  let request: DataStep | undefined;
+  const add = (step: Omit<DataStep, 'number'>): DataStep => {
+    const entry = { number: steps.length + 1, ...step };
+    steps.push(entry);
+    return entry;
+  };
+  for (const step of summary.steps) {
+    const isSource = step.layer !== undefined && /^[a-z]/.test(step.layer) && !NOT_DATA.has(step.layer);
+    if (isSource) {
+      const text =
+        step.layer === 'api'
+          ? step.text.replace(/^api /, '')
+          : `${step.text.replace(/^(read|write)\b/, (verb) => `${verb} ${step.layer}`)}`;
+      const value = step.notes.find((note) => note.startsWith('value '));
+      const into = step.notes.find((note) => note.startsWith('into '));
+      const entry = add({
+        kind: step.layer!,
+        text: `${into ? `${into.slice(5)} ← ` : ''}${text.replace(/  \(.*\)$/, '')}${value ? ` ← ${value.slice(6)}` : ''}`,
+        notes: step.notes.filter((note) => note.startsWith('input:')),
+        at: step.at,
+        success: [],
+        failure: [],
+      });
+      if (step.failable || step.layer === 'api') request = entry;
+    }
+    const success = step.success.filter(changesData);
+    const failure = step.failure.filter(changesData);
+    const target = request;
+    if (target && (step.failable || step.handledBy !== undefined || isSource)) {
+      target.success.push(...success);
+      target.failure.push(...failure);
+    } else if (target && (success.length > 0 || failure.length > 0)) {
+      target.success.push(...success);
+      target.failure.push(...failure);
+    } else {
+      for (const outcome of [...success, ...failure])
+        add({ kind: 'viewModel', text: `${outcome.target} ← ${outcome.value}`, notes: [], at: outcome.at, success: [], failure: [] });
+    }
+    for (const outcome of step.writes.filter(changesData)) {
+      const entry = add({
+        kind: 'viewModel',
+        text: `${outcome.target} ← ${outcome.value}`,
+        notes: [],
+        at: outcome.at,
+        success: [],
+        failure: [],
+      });
+      if (outcome.shown.length > 0) entry.notes.push(`→ ${outcome.shown.join(', ')}`);
+    }
+    if (step.stops && (request ?? steps.at(-1))) (request ?? steps.at(-1))!.stops ??= step.stops;
+  }
+  return steps;
+}
+
+/**
+ * A summary that stops at the steps of one layer: steps nested below such a
+ * step merge into it (data sources as notes, outcomes moved), every step
+ * above stays. Steps are numbered again.
+ */
+function collapseBelow(summary: FlowSummary, layer: string): FlowSummary {
+  const kept: SummaryStep[] = [];
+  let owner: SummaryStep | undefined;
+  let ownerDepth = -1;
+  for (const step of summary.steps) {
+    if (owner && step.depth > ownerDepth) {
+      if (step.layer && !/^[A-Z]/.test(step.layer)) owner.notes.push(`→ ${step.text.replace(/  \(.*\)$/, '')}`);
+      owner.success.push(...step.success);
+      owner.failure.push(...step.failure);
+      owner.writes.push(...step.writes);
+      if (step.failable) owner.failable = true;
+      if (step.handledBy !== undefined) owner.handledBy ??= step.handledBy;
+      if (step.stops) owner.stops ??= step.stops;
+      continue;
+    }
+    owner = undefined;
+    const entry: SummaryStep = {
+      ...step,
+      number: kept.length + 1,
+      notes: [...step.notes],
+      success: [...step.success],
+      failure: [...step.failure],
+      writes: [...step.writes],
+    };
+    kept.push(entry);
+    if (step.layer?.toLowerCase() === layer) {
+      owner = entry;
+      ownerDepth = step.depth;
+    }
+  }
+  return { ...summary, steps: renumbered(summary.steps, kept) };
+}
+
+/** Steps numbered again after some were folded: `handledBy` follows its step, or goes when that step is gone. */
+function renumbered(before: SummaryStep[], after: SummaryStep[]): SummaryStep[] {
+  const numbers = new Map<number, number>();
+  before.forEach((step) => {
+    const index = after.findIndex((candidate) => candidate.at === step.at && candidate.text === step.text);
+    if (index >= 0) numbers.set(step.number, index + 1);
+  });
+  for (const step of after) {
+    if (step.handledBy === undefined) continue;
+    const mapped = numbers.get(step.handledBy);
+    if (mapped === undefined) delete step.handledBy;
+    else step.handledBy = mapped;
+  }
+  return after;
+}
+
 /**
  * A summary with the numbered steps of some layers only. A hidden data source
  * (`GET …`, `read "accessToken"`) becomes a note of the kept step above it;
@@ -901,6 +1131,7 @@ function keepLayers(summary: FlowSummary, layers: ReadonlySet<string>): FlowSumm
     target.failure.push(...from.failure);
     target.writes.push(...from.writes);
     if (from.failable) target.failable = true;
+    if (from.handledBy !== undefined) target.handledBy ??= from.handledBy;
     if (from.stops) target.stops ??= from.stops;
   };
   for (const step of summary.steps) {
@@ -930,7 +1161,7 @@ function keepLayers(summary: FlowSummary, layers: ReadonlySet<string>): FlowSumm
     if (step.layer && !/^[A-Z]/.test(step.layer)) owner.notes.push(`→ ${step.text.replace(/  \(.*\)$/, '')}`);
     merge(owner, step);
   }
-  return { ...summary, steps: kept };
+  return { ...summary, steps: renumbered(summary.steps, kept) };
 }
 
 /** The failure a condition stands for: `catch …`, a `.failure` case, an optional binding or cast that failed. */

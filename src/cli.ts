@@ -468,10 +468,10 @@ queryCommand('define', 'Items of a screen and the data source of each item (API,
   .option('--source <kinds>', 'only items with data from these sources: api,local,file,localization,literal,input')
   .option('--item <id>', 'only this item (LoginView#5), with full paths')
   .option('--detail', 'also DATA (path of each value) and CONDITIONS')
-  .option('--format <format>', 'text, compact (fewest tokens), json or markdown', 'text')
+  .option('--format <format>', 'text, compact (fewest tokens), pretty (aligned columns), json or markdown', 'text')
   .action((screen: string, options) =>
     withDatabase(options.root, options.db, (db) => {
-      if (!['text', 'compact', 'json', 'markdown'].includes(options.format)) program.error(`unknown format ${options.format}`);
+      if (!['text', 'compact', 'pretty', 'json', 'markdown'].includes(options.format)) program.error(`unknown format ${options.format}`);
       try {
         console.log(
           defineText(db, resolve(options.root), {
@@ -498,12 +498,15 @@ queryCommand('flows', 'Processing flows of a screen: each entry point and its st
   .option('--entry <id>', 'only one flow: a flow id (LoginView/F2) or an item id from define (LoginView#5)')
   .option('--depth <n>', 'maximum call depth', (value) => Number.parseInt(value, 10), 12)
   .option('--no-children', 'leave out the flows of child views, cells and rows')
-  .option('--steps', 'every step in execution order instead of the summary (path, success, failure, stores)')
+  .option('--steps', 'every step in execution order')
+  .option('--calls', 'the numbered calls through the layers (default: one step per get/set of data)')
   .option('--layers <list>', 'only steps of these layers, comma separated (ViewModel,Repository)')
-  .option('--format <format>', 'text, compact (fewest tokens), json, markdown or mermaid', 'text')
+  .option('--until <layer>', 'every step from the view down to this layer (Repository); what runs below it is folded into it')
+  .option('--format <format>', 'text, compact (fewest tokens), pretty (aligned columns), json, markdown or mermaid', 'text')
   .action((screen: string, options) =>
     withDatabase(options.root, options.db, (db) => {
-      if (!['text', 'compact', 'json', 'markdown', 'mermaid'].includes(options.format)) program.error(`unknown format ${options.format}`);
+      if (!['text', 'compact', 'pretty', 'json', 'markdown', 'mermaid'].includes(options.format))
+        program.error(`unknown format ${options.format}`);
       try {
         console.log(
           flowsText(db, resolve(options.root), {
@@ -512,7 +515,9 @@ queryCommand('flows', 'Processing flows of a screen: each entry point and its st
             children: options.children !== false,
             format: options.format as FlowsFormat,
             steps: options.steps === true,
+            calls: options.calls === true,
             ...(options.layers ? { layers: String(options.layers).split(',') } : {}),
+            ...(options.until ? { until: String(options.until) } : {}),
             budget: options.budget,
             ...(options.entry ? { entry: options.entry } : {}),
           }),

@@ -1,27 +1,12 @@
-LoginView  [SwiftUI View, layer View]  SampleArchitecture/LoginView.swift:7
+LoginView [SwiftUI View] @SampleArchitecture/LoginView.swift:7
 
-LoginView/F1  create  LoginView init → vm = LoginViewModel()  LoginView.swift:8
- 1 [View]       vm = LoginViewModel()                               LoginView.swift:8
- 2 [ViewModel]    LoginViewModel.init()                             LoginViewModel.swift:25
-                    writes
-                      LoginViewModel.anonymousViewModelMapper ← init(viewModel: self)
-                      LoginViewModel.registerViewModelMapper ← init(viewModel: self)
- 3 [ViewModel]      useCase = DIContainer.shared.getLoginUseCase()  LoginViewModel.swift:16
- 4 [DI]               DIContainer.getLoginUseCase()                 DIContainer.swift:22
+F2 action #5 Button "Login" tap @LoginView.swift:24
+1 JSONDecoder.decode(AnonymousSession) (input: literal "{ session_id=\"fjaksdjfkajsdjfa\" }") @LoginRepository.swift:23
+    success
+      !entity.isEmpty → LoginViewModel.state ← .main → #1–#6 ⚠ never runs: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
+    ⚠ stops: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
+⚠ input is not valid JSON (LoginRepository.swift:17)
 
-LoginView/F2  action  LoginView#5 Button "Login" tap  LoginView.swift:24
- 1 [ViewModel]   LoginViewModel.anonymousSession()                                                                                                                LoginViewModel+APIHandler.swift:6
- 2 [UseCase]       LoginUseCaseImpl.anonymous(_:)  (DI: LoginUseCase → LoginUseCaseImpl  DIContainer.swift:17; Mapper = AnonymousViewModelMapper)                 LoginUseCase.swift:22
- 3 [Mapper]          AnonymousEntityMapper.init()                                                                                                                 AnonymousEntityMapper.swift:17
- 4 [Repository]      LoginRepositoryImpl.anonymousSession(_:)  (DI: LoginRepository → LoginRepositoryImpl  DIContainer.swift:13; Mapper = AnonymousEntityMapper)  LoginRepository.swift:14
- 5 [api]               api JSONDecoder.decode(AnonymousSession)  (input: literal "{ session_id=\"fjaksdjfkajsdjfa\" }")                                           LoginRepository.swift:23
-                         success
-                           !entity.isEmpty → LoginViewModel.state ← .main  → #1–#6  ⚠ never runs: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
-                         failure
-                           on failure → AnonymousViewModelMapper.error(_:)  ⚠ empty
-                           cast fails (domain) → AnonymousViewModelMapper.error(_:)  ⚠ empty
- 6 [Mapper]            AnonymousViewModelMapper.mapping(_:)                                                                                                       AnonymousViewModelMapper.swift:12
-                         ⚠ stops: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
-  warnings ⚠ input is not valid JSON (LoginRepository.swift:17)
+No data access: F1
 
-More: --steps
+More: --calls (calls through the layers), --steps (every step)

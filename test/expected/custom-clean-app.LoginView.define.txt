@@ -1,22 +1,23 @@
-LoginView  [SwiftUI View, layer View]  SampleArchitecture/LoginView.swift:7
-  state:     @ObservedObject vm: LoginViewModel = LoginViewModel()  LoginView.swift:8
-  children:  none
+LoginView [SwiftUI View] @SampleArchitecture/LoginView.swift:7
+# vm = LoginViewModel
+  state: @ObservedObject vm: LoginViewModel = LoginViewModel() @LoginView.swift:8
+  children: none
 
 ITEMS (6)
- id           line                kind       dir      when                   datasource
- LoginView#1  LoginView.swift:15  TextField  input    vm.state == .login     LoginViewModel.firstName; placeholder localization "First Name" (missing en, ja)
- LoginView#2  LoginView.swift:17  TextField  input    vm.state == .login     LoginViewModel.lastName; placeholder localization "Last Name" (missing en, ja)
- LoginView#3  LoginView.swift:20  TextField  input    vm.state == .login     LoginViewModel.phoneNumber; placeholder localization "Phone Number" (missing en, ja)
- LoginView#4  LoginView.swift:22  TextField  input    vm.state == .login     LoginViewModel.customerNumber; placeholder localization "Customer Number" (missing en, ja)
- LoginView#5  LoginView.swift:24  Button     action   vm.state == .login     localization "Login"
- LoginView#6  LoginView.swift:33  Text       display  !(vm.state == .login)  localization "Hello, user"
+ id | line | kind | dir | when | datasource
+ #1 | :15 | TextField | input | vm.state == .login | vm.firstName; placeholder localization "First Name" (missing en, ja)
+ #2 | :17 | TextField | input | vm.state == .login | vm.lastName; placeholder localization "Last Name" (missing en, ja)
+ #3 | :20 | TextField | input | vm.state == .login | vm.phoneNumber; placeholder localization "Phone Number" (missing en, ja)
+ #4 | :22 | TextField | input | vm.state == .login | vm.customerNumber; placeholder localization "Customer Number" (missing en, ja)
+ #5 | :24 | Button | action | vm.state == .login | localization "Login"
+ #6 | :33 | Text | display | !(vm.state == .login) | localization "Hello, user"
 
 SUMMARY
- api           JSONDecoder.decode → AnonymousSession
- local         none
- file          none
- localization  Localizable: 6 keys (6 missing in en, 6 missing in ja)
- input         firstName: String, lastName: String, phoneNumber: String, customerNumber: String  (4 not read elsewhere)
- unresolved    none
+ api JSONDecoder.decode → AnonymousSession
+ local none
+ file none
+ localization Localizable: 6 keys (6 missing in en, 6 missing in ja)
+ input firstName: String, lastName: String, phoneNumber: String, customerNumber: String (4 not read elsewhere)
+ unresolved none
 
 More: --detail (DATA, CONDITIONS) or --item <id>

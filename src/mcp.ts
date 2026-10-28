@@ -88,6 +88,17 @@ export function createServer(db: Db, root: string): McpServer {
         entry: text(200).optional().describe('only one flow: flow id (LoginView/F2) or item id from get_screen_definition (LoginView#5)'),
         depth: z.number().int().min(1).max(30).optional().describe('maximum call depth (default 12)'),
         include_children: z.boolean().optional().describe('include flows of child views, cells and rows (default true)'),
+        until: text(40)
+          .optional()
+          .describe(
+            'every step from the view down to this layer (e.g. "Repository"), including mapping in between; what runs below it is folded into it',
+          ),
+        calls: z
+          .boolean()
+          .optional()
+          .describe(
+            'the numbered calls through the layers instead of the data view (one step per get/set of a datasource or view-model variable)',
+          ),
         layers: z
           .array(text(40))
           .max(12)
@@ -107,13 +118,15 @@ export function createServer(db: Db, root: string): McpServer {
       },
       annotations: readOnly,
     },
-    ({ screen, entry, depth, include_children, layers, steps, format, budget }) =>
+    ({ screen, entry, depth, include_children, until, layers, steps, calls, format, budget }) =>
       run(() =>
         flowsText(db, root, {
           screen,
           children: include_children !== false,
           steps: steps === true,
+          calls: calls === true,
           ...(layers ? { layers } : {}),
+          ...(until ? { until } : {}),
           ...(entry ? { entry } : {}),
           ...(depth !== undefined ? { depth } : {}),
           format: format ?? 'compact',

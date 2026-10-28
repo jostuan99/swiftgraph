@@ -1,19 +1,20 @@
-ProductListView  [SwiftUI View, layer View]  Sources/CleanApp/Presentation/ProductListView.swift:3
-  state:     @StateObject viewModel = AppContainer.shared.makeProductListViewModel()  ProductListView.swift:4
-  children:  ProductRow (row of List, ProductListView.swift:9)
+ProductListView [SwiftUI View] @Sources/CleanApp/Presentation/ProductListView.swift:3
+# api = https://api.example.com
+  state: @StateObject viewModel = AppContainer.shared.makeProductListViewModel() @ProductListView.swift:4
+  children: ProductRow (row of List)
 
 ITEMS (4)
- id                                    line                      kind             dir      when  datasource
- ProductListView#1                     ProductListView.swift:11  navigationTitle  display        localization "products.title"
- ProductListView#2                     ProductListView.swift:8   List             list           GET https://api.example.com/v1/products items
- ProductRow#1  (in ProductListView#2)  ProductListView.swift:24  Text             display        GET https://api.example.com/v1/products items[].product_name
- ProductRow#2  (in ProductListView#2)  ProductListView.swift:26  Text             display        GET https://api.example.com/v1/products items[].price
+ id | line | kind | dir | when | datasource
+ #1 | :11 | navigationTitle | display | | localization "products.title"
+ #2 | :8 | List | list | | GET /v1/products items
+ ProductRow#1 (in #2) | :24 | Text | display | | GET /v1/products items[].product_name
+ ProductRow#2 (in #2) | :26 | Text | display | | GET /v1/products items[].price
 
 SUMMARY
- api           GET "https://api.example.com/v1/products" → serializingDecodable → ProductListResponse  .items: [ProductDTO] "items", .items[].name: String "product_name", .items[].price: Decimal "price"
- local         none
- file          JSONDecoder.decode → [ProductDTO]  [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")"  Data(contentsOf:) → Data
- localization  Localizable: 1 key (1 missing in ja)
- unresolved    none
+ api GET /v1/products ProductListResponse items: [ProductDTO], items[].product_name: String, items[].price: Decimal
+ local none
+ file JSONDecoder.decode → [ProductDTO] [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")" Data(contentsOf:) → Data
+ localization Localizable: 1 key (1 missing in ja)
+ unresolved none
 
 More: --detail (DATA, CONDITIONS) or --item <id>

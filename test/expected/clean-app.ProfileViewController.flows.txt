@@ -1,38 +1,21 @@
-ProfileViewController  [UIViewController, layer View]  Sources/CleanApp/Presentation/Profile/ProfileViewController.swift:4
+ProfileViewController [UIViewController] @Sources/CleanApp/Presentation/Profile/ProfileViewController.swift:4
+# api = https://api.example.com
+# vm = ProfileViewModel
 
-ProfileViewController/F1  create  ProfileViewController init → viewModel = ProfileViewModel()  ProfileViewController.swift:5
- 1 [View]          viewModel = ProfileViewModel()                                                         ProfileViewController.swift:5
- 2 [ViewModel]       ProfileViewModel.init(service:)                                                      ProfileViewModel.swift:13
- 3 [ViewModel]         notificationsEnabled = UserDefaults.standard.bool(forKey: "notificationsEnabled")  ProfileViewModel.swift:9
- 4 [userDefaults]        read "notificationsEnabled"                                                      ProfileViewModel.swift:9
+F1 create ProfileViewController init → viewModel = ProfileViewModel() @ProfileViewController.swift:5
+1 vm.notificationsEnabled ← read userDefaults "notificationsEnabled" @ProfileViewModel.swift:11
 
-ProfileViewController/F2  action  ProfileViewController#4 logoutButton tap → didTapLogout()  ProfileViewController+Setup.swift:6
- 1 [View]          ProfileViewController.didTapLogout()                  ProfileViewController+Setup.swift:10
- 2 [ViewModel]       ProfileViewModel.logout()                           ProfileView+Settings.swift:15
- 3 [userDefaults]      write "notificationsEnabled"  (UserDefaults.set)  ProfileView+Settings.swift:16
+F2 action #4 logoutButton tap → didTapLogout() @ProfileViewController+Setup.swift:6
+1 write userDefaults "notificationsEnabled" ← false @ProfileView+Settings.swift:16
 
-ProfileViewController/F3  lifecycle  ProfileViewController.viewDidLoad()  ProfileViewController.swift:12
-  1 [View]          ProfileViewController.viewDidLoad()                                       ProfileViewController.swift:12
-  2 [View]            ProfileViewController.setupViews()                                      ProfileViewController+Setup.swift:4
-                        writes
-                          nicknameField.placeholder ← localization "profile.nickname.placeholder"
-  3 [localization]      read "profile.logout"                                                 ProfileViewController+Setup.swift:5
-  4 [localization]      read "profile.nickname.placeholder"                                   ProfileViewController+Setup.swift:7
-  5 [View]            ProfileViewController.bind()                                            ProfileViewController+Binding.swift:4
-  6 [View]              viewModel.$name.sink  async (after the publisher emits)               ProfileViewController+Binding.swift:6
-                          writes
-                            nameLabel.text ← ProfileViewModel.name
-  7 [View]              viewModel.$points.sink  async (after the publisher emits)             ProfileViewController+Binding.swift:11
-                          writes
-                            pointsLabel.text ← ProfileViewModel.points
-  8 [ViewModel]           ProfileViewModel.load()                                             ProfileViewModel+Loading.swift:2
-  9 [Service]               ProfileServiceImpl.profile()  (unique: ProfileService.profile())  ProfileService.swift:8
-                              failure
-                                try? → ProfileServiceImpl.profile()  ⚠ error ignored: nothing is shown or stored on failure
- 10 [api]                     GET https://api.example.com/v1/me → ProfileResponse             ProfileService.swift:9
-                                success
-                                  ProfileViewModel.name ← display_name  → #1
-                                  ProfileViewModel.avatarURL ← avatar_url
-                                  ProfileViewModel.points ← points  → #2
+F3 lifecycle viewDidLoad() @ProfileViewController.swift:12
+1 GET /v1/me → ProfileResponse @ProfileService.swift:9
+    success
+      vm.name ← display_name → #1
+      vm.avatarURL ← avatar_url
+      vm.points ← points → #2
+    failure
+      catch → vm.errorMessage ← error GET /v1/me
+      catch → vm.showsError ← true
 
-More: --steps
+More: --calls (calls through the layers), --steps (every step)

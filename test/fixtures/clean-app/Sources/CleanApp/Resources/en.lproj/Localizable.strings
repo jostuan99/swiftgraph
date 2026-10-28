@@ -4,3 +4,5 @@
 "profile.logout" = "Log out";
 "profile.nickname" = "Nickname";
 "profile.nickname.placeholder" = "Enter a nickname";
+"profile.error.title" = "Could not load your profile";
+"common.ok" = "OK";

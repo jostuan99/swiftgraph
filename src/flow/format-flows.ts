@@ -3,21 +3,116 @@
 import { compactText } from './compact.ts';
 import type { FlowOutcome, FlowStep, ScreenFlow, ScreenFlows } from './flows.ts';
 
-export type FlowsFormat = 'text' | 'compact' | 'json' | 'markdown' | 'mermaid';
+export type FlowsFormat = 'text' | 'compact' | 'pretty' | 'json' | 'markdown' | 'mermaid';
 
 /** `steps`: every step in execution order instead of the summary (text and markdown). */
-export function formatFlows(result: ScreenFlows, format: FlowsFormat, options: { steps?: boolean } = {}): string {
+/**
+ * `steps`: every step in execution order; `calls`: the numbered calls through
+ * the layers; otherwise the data view (one step per get/set of data).
+ */
+export function formatFlows(result: ScreenFlows, format: FlowsFormat, options: { steps?: boolean; calls?: boolean } = {}): string {
   if (format === 'json') return JSON.stringify(result, null, 2);
   if (format === 'mermaid') return mermaid(result);
   if (format === 'markdown') return markdown(result);
-  const output = options.steps ? text(result) : summaryText(result, format === 'compact');
-  return format === 'compact' ? compactText(output) : output;
+  if (format === 'pretty') return options.steps ? text(result) : summaryText(result);
+  // `text` and `compact` spend fewer tokens: no padding, a legend, the screen's name left out.
+  const output = options.steps ? text(result) : options.calls ? leanSummary(result) : dataView(result);
+  return compactText(output, { tight: format === 'compact' });
 }
 
 /**
  * The short form: for each flow the call path, what it writes on success
  * (with the mapping from response fields), what it does on failure, and what it stores.
  */
+/**
+ * The summary with few tokens: the layer only when it changes, the screen's
+ * own name left out of steps and titles, outcomes under their step.
+ */
+/** The data view: each get/set of a datasource or view-model variable, with what success and failure change. */
+function dataView(result: ScreenFlows): string {
+  const view = result.view;
+  const screen = (text: string) => text.split(`${view.name}.`).join('').replaceAll(`${view.name}#`, '#');
+  const lines = [`${view.name} [${view.kind}] ${view.file}:${view.line}`];
+  const empty: string[] = [];
+  for (const flow of result.flows) {
+    const id = flow.id.startsWith(`${view.name}/`) ? flow.id.slice(view.name.length + 1) : flow.id;
+    const data = flow.summary.data;
+    if (data.length === 0) {
+      empty.push(id);
+      continue;
+    }
+    lines.push('', `${id} ${flow.kind} ${screen(flow.title)} ${where(flow.at)}`);
+    for (const step of data) {
+      const notes = step.notes.length > 0 ? ` (${step.notes.map((note) => note.replaceAll(`${view.name}#`, '#')).join('; ')})` : '';
+      lines.push(`${step.number} ${step.kind === 'viewModel' ? 'set ' : ''}${step.text}${notes} ${where(step.at)}`);
+      const block = (title: string, outcomes: FlowOutcome[]) => {
+        if (outcomes.length === 0) return;
+        lines.push(`    ${title}`);
+        for (const outcome of outcomes)
+          for (const line of outcomeLines({ ...outcome, nested: false }, view.name)) lines.push(`      ${line}`);
+      };
+      block('success', step.success);
+      block('failure', step.failure);
+      if (step.stops) lines.push(`    ⚠ stops: ${step.stops}`);
+    }
+    const inline = data.flatMap((step) => [step.stops ?? '', ...[...step.success, ...step.failure].map((outcome) => outcome.never ?? '')]);
+    for (const warning of new Set(flow.summary.warnings.filter((warning) => !inline.includes(warning)))) lines.push(`⚠ ${warning}`);
+  }
+  if (empty.length > 0) lines.push('', `No data access: ${empty.join(', ')}`);
+  lines.push('', 'More: --calls (calls through the layers), --steps (every step)');
+  return lines.join('\n');
+}
+
+function leanSummary(result: ScreenFlows): string {
+  const view = result.view;
+  const screen = (text: string) => text.split(`${view.name}.`).join('').replaceAll(`${view.name}#`, '#');
+  const lines = [`${view.name} [${view.kind}] ${view.file}:${view.line}`];
+  for (const flow of result.flows) {
+    const summary = flow.summary;
+    const id = flow.id.startsWith(`${view.name}/`) ? flow.id.slice(view.name.length + 1) : flow.id;
+    lines.push('', `${id} ${flow.kind} ${screen(flow.title)} ${where(flow.at)}`);
+    const unhandled: string[] = [];
+    const width = String(summary.steps.length).length;
+    let layer: string | undefined;
+    for (const step of summary.steps) {
+      // Step numbers in the first column, the step right after its number; outcomes indented under it.
+      const indent = '';
+      const gutter = ' '.repeat(width + 1);
+      const notes = step.notes.filter((note) => !/^[A-Z]+ "|^"|^key |^write$/.test(note));
+      const tag = step.layer && step.layer !== layer ? ` [${step.layer}]` : '';
+      layer = step.layer ?? layer;
+      lines.push(
+        `${String(step.number).padStart(width)} ${indent}${tag.trimStart()}${tag ? ' ' : ''}${step.when ? `if ${step.when} → ` : ''}${screen(step.text)}${notes.length > 0 ? ` (${notes.join('; ')})` : ''} ${where(step.at)}`,
+      );
+      const block = (title: string, outcomes: FlowOutcome[]) => {
+        if (outcomes.length === 0) return;
+        lines.push(`${gutter}${indent}  ${title}`);
+        for (const outcome of outcomes) for (const line of outcomeLines(outcome, view.name)) lines.push(`${gutter}${indent}    ${line}`);
+      };
+      if (step.handledBy !== undefined) lines.push(`${gutter}${indent}  success/failure → ${step.handledBy}`);
+      else if (
+        step.failable &&
+        step.failure.length === 0 &&
+        !summary.steps.some((other) => other.number < step.number && other.depth < step.depth && other.failure.length > 0)
+      ) {
+        unhandled.push(`${screen(step.text)}: error not handled`);
+      }
+      block('success', step.success);
+      block('failure', step.failure);
+      block('writes', step.writes);
+      if (step.stops) lines.push(`${gutter}${indent}  ⚠ stops: ${step.stops}`);
+    }
+    const inline = summary.steps.flatMap((step) => [
+      step.stops ?? '',
+      ...[...step.success, ...step.failure, ...step.writes].map((outcome) => outcome.never ?? ''),
+    ]);
+    for (const warning of new Set([...unhandled, ...summary.warnings.filter((warning) => !inline.includes(warning))]))
+      lines.push(`⚠ ${warning}`);
+  }
+  lines.push('', 'More: --steps');
+  return lines.join('\n');
+}
+
 function summaryText(result: ScreenFlows, compact = false): string {
   const view = result.view;
   const lines = [`${view.name}  [${view.kind}${view.layer ? `, layer ${view.layer}` : ''}]  ${view.file}:${view.line}`];
@@ -33,7 +128,7 @@ function summaryText(result: ScreenFlows, compact = false): string {
       const notes = step.notes.filter((note) => !/^[A-Z]+ "|^"|^key |^write$/.test(note));
       rows.push({
         head: `${String(step.number).padStart(width)} ${(step.layer ? `[${step.layer}]` : '').padEnd(layerWidth)}`,
-        text: `${indent}${step.text}${notes.length > 0 ? `  (${notes.join('; ')})` : ''}`,
+        text: `${indent}${step.when ? `if ${step.when} → ` : ''}${step.text}${notes.length > 0 ? `  (${notes.join('; ')})` : ''}`,
         at: where(step.at),
       });
       // Outcomes sit under their step; the compact format does not pad them to the step's text column.
@@ -48,7 +143,8 @@ function summaryText(result: ScreenFlows, compact = false): string {
       block('failure', step.failure.length > 0 || !step.failable ? step.failure : []);
       // A request inside a call whose error is ignored or caught is covered by that call.
       const covered = summary.steps.some((other) => other.number < step.number && other.depth < step.depth && other.failure.length > 0);
-      if (step.failable && step.failure.length === 0 && !covered) unhandled.push(`${step.text}: error not handled`);
+      if (step.handledBy !== undefined) rows.push({ head: pad, text: `${indent}  success/failure → step ${step.handledBy}` });
+      else if (step.failable && step.failure.length === 0 && !covered) unhandled.push(`${step.text}: error not handled`);
       block('writes', step.writes);
       if (step.stops) rows.push({ head: pad, text: `${indent}  ⚠ stops: ${step.stops}` });
     }

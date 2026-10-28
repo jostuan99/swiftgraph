@@ -5,7 +5,12 @@
 
 const LOCATION = /(\S+\.swift):(\d+)$/;
 
-export function compactText(text: string): string {
+export interface CompactOptions {
+  /** One space per nesting level instead of two; no hint lines (`More: …`). */
+  tight?: boolean;
+}
+
+export function compactText(text: string, options: CompactOptions = {}): string {
   const legend: string[] = [];
   let body = text;
 
@@ -45,15 +50,24 @@ export function compactText(text: string): string {
   let lastFile = '';
   const lines = body.split('\n').map((line) => {
     const indent = /^ */.exec(line)![0].length;
-    let rest = line.slice(indent).replace(/ {2,}/g, ' ').trimEnd();
+    // A numbered step keeps the nesting written after its number (`3   vm.reload()`).
+    const step = /^(\d+ )( *)/.exec(line.slice(indent));
+    const nesting = step ? ' '.repeat(options.tight ? Math.ceil(step[2]!.length / 2) : step[2]!.length) : '';
+    let rest = `${step ? step[1] : ''}${nesting}${line
+      .slice(indent + (step ? step[0].length : 0))
+      .replace(/ {2,}/g, ' ')
+      .trimEnd()}`;
     const location = LOCATION.exec(rest);
     if (location) {
       const [whole, file, number] = location;
       rest = `${rest.slice(0, rest.length - whole.length).trimEnd()} @${file === lastFile ? '' : file}:${number}`;
       lastFile = file!;
     }
-    return `${' '.repeat(Math.ceil(indent / 2))}${rest}`;
+    return `${' '.repeat(options.tight ? Math.ceil(indent / 2) : indent)}${rest}`;
   });
+  if (options.tight) {
+    for (let index = lines.length - 1; index >= 0; index--) if (lines[index]!.startsWith('More: ')) lines.splice(index, 1);
+  }
   const header = lines.findIndex((line) => line !== '');
   if (legend.length > 0) lines.splice(header + 1, 0, ...legend.map((entry) => `# ${entry}`));
   return lines.filter((line, index) => line !== '' || (lines[index - 1] ?? '') !== '').join('\n');

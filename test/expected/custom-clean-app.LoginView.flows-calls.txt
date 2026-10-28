@@ -1,0 +1,33 @@
+LoginView [SwiftUI View] @SampleArchitecture/LoginView.swift:7
+# di: LoginUseCase → LoginUseCaseImpl DIContainer.swift:17; LoginRepository → LoginRepositoryImpl DIContainer.swift:13
+# vm = LoginViewModel
+
+F1 create LoginView init → vm = LoginViewModel() @LoginView.swift:8
+1 [View] vm = LoginViewModel() @:8
+2 [ViewModel] vm.init() @LoginViewModel.swift:25
+    writes
+      vm.anonymousViewModelMapper ← init(viewModel: self)
+      vm.registerViewModelMapper ← init(viewModel: self)
+3 useCase = DIContainer.shared.getLoginUseCase() @:16
+4 [DI] DIContainer.getLoginUseCase() @DIContainer.swift:22
+
+F2 action #5 Button "Login" tap @LoginView.swift:24
+1 [ViewModel] vm.anonymousSession() @LoginViewModel+APIHandler.swift:6
+2 [UseCase] LoginUseCaseImpl.anonymous(_:) (Mapper = AnonymousViewModelMapper) @LoginUseCase.swift:22
+3 [Mapper] AnonymousEntityMapper.init() @AnonymousEntityMapper.swift:17
+4 [Repository] LoginRepositoryImpl.anonymousSession(_:) (Mapper = AnonymousEntityMapper) @LoginRepository.swift:14
+5 Just(()) → compactMap { jsonData.data(using: .utf8) } → tryMap { decoder.decode(Mapper.ResponseEntity.self, from: data) } → mapError { DomainError() } → eraseToAnyPublisher @:18
+6 [api] api JSONDecoder.decode(AnonymousSession) (input: literal "{ session_id=\"fjaksdjfkajsdjfa\" }") @:23
+    success/failure → 7
+7 [UseCase] sink async @LoginUseCase.swift:27
+    success
+      RegisterEntityMapper.requestEntity ← Self.domainToRequest(domain) ⚠ never runs: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
+      !entity.isEmpty → vm.state ← .main → #1–#6 ⚠ never runs: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
+    failure
+      on failure → AnonymousViewModelMapper.error(_:) ⚠ empty
+      cast fails (domain) → AnonymousViewModelMapper.error(_:) ⚠ empty
+8 [Mapper] if let domain = domain as? Mapper.EntityResult → AnonymousViewModelMapper.mapping(_:) @AnonymousViewModelMapper.swift:12
+    ⚠ stops: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
+⚠ input is not valid JSON (LoginRepository.swift:17)
+
+More: --steps

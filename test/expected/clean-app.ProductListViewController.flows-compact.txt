@@ -1,43 +1,22 @@
-ProductListViewController [UIViewController, layer View] @Sources/CleanApp/Presentation/ProductListViewController.swift:4
+ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:4
 # api = https://api.example.com
-# di: ProductRepository → ProductRepositoryImpl AppContainer.swift:13; ProductService → ProductServiceImpl AppContainer.swift:10
 # vm = ProductListViewModel
 
-ProductListViewController/F1 action ProductListViewController#4 refreshButton tap → didTapRefresh() @ProductListViewController.swift:27
- 1 [View] ProductListViewController.didTapRefresh() @:49
- 2 [ViewModel] vm.reload() @ProductListViewModel.swift:26
-    writes
-     vm.errorMessage ← nil → #3
- 3 [Repository] ProductRepositoryImpl.products() @ProductRepository.swift:14
- 4 [Service] ProductServiceImpl.fetchProducts() @ProductService.swift:14
- 5 [keychain] read "accessToken" @:15
- 6 [api] GET /v1/products → ProductListResponse @:17
-       success
-        vm.title ← title → #1
-        vm.rows ← items (map → [ProductRowViewData]) → #5, ProductCell#1, ProductCell#2
-          .name ← items[].product_name
-          .price ← items[].price (formatted)
-        vm.lastUpdated ← Date() → #2
-       failure
-        catch let error as AFError → vm.errorMessage ← error GET /v1/products → #3
-        catch → vm.rows ← [] → #5, ProductCell#1, ProductCell#2
-        catch → vm.errorMessage ← error GET /v1/products → #3
- 7 [Storage] SettingsStore.markUpdated(_:) @SettingsStore.swift:10
- 8 [userDefaults] write "lastUpdated" (UserDefaults.set) @:11
+F1 action #4 refreshButton tap → didTapRefresh() @ProductListViewController.swift:27
+1 set vm.errorMessage ← nil (→ #3) @ProductListViewModel.swift:29
+2 read keychain "accessToken" @ProductService.swift:15
+3 GET /v1/products → ProductListResponse @:17
+  success
+   vm.title ← title → #1
+   vm.rows ← items (map → [ProductRowViewData]) → #5, ProductCell#1, ProductCell#2
+     .name ← items[].product_name
+     .price ← items[].price (formatted)
+   vm.lastUpdated ← Date() → #2
+  failure
+   catch let error as AFError → vm.errorMessage ← error GET /v1/products → #3
+   catch → vm.rows ← [] → #5, ProductCell#1, ProductCell#2
+   catch → vm.errorMessage ← error GET /v1/products → #3
+4 write userDefaults "lastUpdated" ← Date() @SettingsStore.swift:11
 
-ProductListViewController/F2 lifecycle ProductListViewController.viewDidLoad() @ProductListViewController.swift:22
- 1 [View] ProductListViewController.viewDidLoad() @:22
- 2 [localization] read "refresh" @:26
- 3 [View] viewModel.$title.sink async (after the publisher emits) @:29
-    writes
-     titleLabel.text ← vm.title
- 4 [View] viewModel.$lastUpdated.sink async (after the publisher emits) @:34
-    writes
-     let date → lastUpdatedLabel.text ← userDefaults "lastUpdated" | vm.lastUpdated
-     lastUpdatedLabel.isHidden ← vm.lastUpdated
- 5 [View] viewModel.$errorMessage.sink async (after the publisher emits) @:42
-    writes
-     errorLabel.text ← vm.errorMessage
-     errorLabel.isHidden ← vm.errorMessage
+No data access: F2
 
-More: --steps

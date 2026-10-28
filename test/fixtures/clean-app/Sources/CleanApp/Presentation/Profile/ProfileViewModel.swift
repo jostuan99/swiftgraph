@@ -6,6 +6,8 @@ final class ProfileViewModel: ObservableObject {
     @Published private(set) var avatarURL: URL?
     @Published private(set) var points: Int = 0
     @Published var nickname: String = ""
+    @Published var showsError = false
+    @Published private(set) var errorMessage: String?
     @Published var notificationsEnabled: Bool = UserDefaults.standard.bool(forKey: "notificationsEnabled")
 
     private let service: ProfileService

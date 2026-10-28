@@ -179,7 +179,7 @@ swiftgraph define <screen> [--root <repo> | --db <path>]
 | `--depth <n>` | số bước tối đa khi lần ngược về nguồn (mặc định 12) |
 | `--source <kinds>` | chỉ in item có nguồn thuộc các loại này |
 | `--item <id>` | chỉ một item, in đầy đủ đường đi (không rút gọn) |
-| `--format` | `text` (mặc định), `compact` (ít token nhất), `json` (cho tool khác, xem dưới), `markdown` (bảng) |
+| `--format` | `text` (mặc định, ít token), `compact` (ít token nhất), `pretty` (căn cột cho người đọc), `json` (cho tool khác, xem dưới), `markdown` (bảng) |
 | `--detail` | in thêm `DATA` và `CONDITIONS` |
 
 Tool MCP tương ứng: `get_screen_definition { screen, include_children, depth, sources, item }`.
@@ -248,7 +248,7 @@ SUMMARY
 
 Đọc output:
 
-- Mặc định chỉ in `ITEMS` và `SUMMARY`; `DATA` và `CONDITIONS` khi có `--detail` hoặc `--item`. Định dạng `compact` (mặc định của tool MCP) giữ nội dung nhưng bỏ căn cột, cột của bảng ngăn bằng `|`, id item của màn hình viết `#1`, dòng cùng file viết `:30`, và legend cho host API, view model, binding DI.
+- Mặc định chỉ in `ITEMS` và `SUMMARY`; `DATA` và `CONDITIONS` khi có `--detail` hoặc `--item`. Định dạng `text` và `compact` (mặc định của tool MCP) giữ nội dung nhưng bỏ căn cột (`pretty` giữ căn cột), cột của bảng ngăn bằng `|`, id item của màn hình viết `#1`, dòng cùng file viết `:30`, và legend cho host API, view model, binding DI.
 - `ITEMS`: `id`, `line` (file:dòng của item), loại, hướng (`display`, `input`, `action`, `list`), điều kiện hiển thị (`when`), và `datasource`: **một** nguồn của item. Ưu tiên dữ liệu lưu trữ hoặc từ xa theo thứ tự `api`, `userDefaults`, `file`, `coreData`, `swiftData`, `keychain` (rồi các loại nguồn khác do dự án khai báo); không có thì biến ViewModel mà view đọc; rồi chuỗi localization; cuối cùng literal. API ghi `<METHOD> <ENDPOINT> <đường dẫn JSON>`, ví dụ `GET https://api.example.com/v1/products items[].product_name` (key JSON lấy từ `CodingKeys` hoặc `.convertFromSnakeCase`; không biết endpoint thì `api <Type>`). Ô nhập (`TextField`, `SecureField`, `UITextField`) ghi thêm placeholder đã localize kèm bản dịch và ngôn ngữ thiếu: `LoginViewModel.firstName; placeholder localization "First Name" (missing en, ja)`; có `prompt:` thì tham số đầu là `label`, prompt là `placeholder`. Ví dụ khác: `userDefaults "lastUpdated"`, `LoginViewModel.firstName`, `localization "Login"`. Đường dẫn trong cây view (`VStack > PointsBadge > Label`) vẫn có trong JSON (trường `path`). Mọi nguồn khác vẫn có trong `DATA`.
 - `DATA`: mỗi giá trị của item, kèm loại nguồn, **type** và **giá trị khi biết** (literal, case enum, key). Đường đi dài được rút gọn thành một dòng; `--item <id>` in đầy đủ.
 - Nguồn `error`: giá trị lấy từ lỗi bắt được (`error.localizedDescription` trong `catch`), kèm lời gọi `try` ném ra nó và nguồn của lời gọi đó; trong `datasource` ghi `error GET https://…`, xếp sau dữ liệu lưu trữ/từ xa và trước biến ViewModel.
@@ -409,38 +409,35 @@ LoginView/F2  action  Button "Login"
   shown:  vm.state → LoginView#1–#6 (define LoginView); vm.error → not read by any view ⚠
 ```
 
-Mặc định `flows` in **bản rút gọn**; `--steps` in mọi bước như mẫu trên. Bản rút gọn đánh số các bước chính (lời gọi qua các lớp, đọc/ghi nguồn dữ liệu, subscription), thụt lề theo lời gọi lồng nhau; bước có thể thất bại (request, lời gọi có `try?`) ghi rõ `success` và `failure`:
+Mặc định `flows` in **góc nhìn dữ liệu**: mỗi bước là một lần get/set datasource (request API, đọc/ghi Keychain, UserDefaults, file, Core Data, SwiftData) hoặc gán biến ViewModel; các lớp ở giữa (UseCase, Repository, Service, Mapper) được bỏ qua; `success`/`failure` chỉ giữ thay đổi dữ liệu của ViewModel (handler không đổi dữ liệu bị bỏ):
 
 ```
-ProductListViewController/F1  action  ProductListViewController#4 refreshButton tap → didTapRefresh()
- 1 [View]          ProductListViewController.didTapRefresh()
- 2 [ViewModel]       ProductListViewModel.reload()
-                       writes
-                         ProductListViewModel.errorMessage ← nil  → #3
- 3 [Repository]        ProductRepositoryImpl.products()  (DI: ProductRepository → ProductRepositoryImpl  AppContainer.swift:13)
- 4 [Service]             ProductServiceImpl.fetchProducts()  (DI: ProductService → ProductServiceImpl  AppContainer.swift:10)
- 5 [keychain]              read "accessToken"
- 6 [api]                   GET https://api.example.com/v1/products → ProductListResponse
-                             success
-                               ProductListViewModel.title ← title  → #1
-                               ProductListViewModel.rows ← items  (map → [ProductRowViewData])  → #5, ProductCell#1, ProductCell#2
-                                   .name ← items[].product_name
-                                   .price ← items[].price  (formatted)
-                               ProductListViewModel.lastUpdated ← Date()  → #2
-                             failure
-                               catch let error as AFError → ProductListViewModel.errorMessage ← error GET https://api.example.com/v1/products  → #3
-                               catch → ProductListViewModel.rows ← []  → #5, ProductCell#1, ProductCell#2
-                               catch → ProductListViewModel.errorMessage ← error GET https://api.example.com/v1/products  → #3
- 7 [Storage]           SettingsStore.markUpdated(_:)
- 8 [userDefaults]        write "lastUpdated"  (UserDefaults.set)
+F1 action #4 refreshButton tap → didTapRefresh() @ProductListViewController.swift:27
+1 set vm.errorMessage ← nil (→ #3) @ProductListViewModel.swift:29
+2 read keychain "accessToken" @ProductService.swift:15
+3 GET /v1/products → ProductListResponse @:17
+    success
+      vm.title ← title → #1
+      vm.rows ← items (map → [ProductRowViewData]) → #5, ProductCell#1, ProductCell#2
+          .name ← items[].product_name
+          .price ← items[].price (formatted)
+      vm.lastUpdated ← Date() → #2
+    failure
+      catch let error as AFError → vm.errorMessage ← error GET /v1/products → #3
+      catch → vm.rows ← [] → #5, ProductCell#1, ProductCell#2
+      catch → vm.errorMessage ← error GET /v1/products → #3
+4 write userDefaults "lastUpdated" ← Date() @SettingsStore.swift:11
 ```
 
-(cột file:dòng bên phải được lược bớt ở đây.)
+Bước đọc ghi biến nhận giá trị: `1 vm.notificationsEnabled ← read userDefaults "notificationsEnabled"`.
+
+Luồng không truy cập dữ liệu (chỉ cập nhật UI) được liệt kê ở `No data access: F2`. `--calls` in **bản đánh số theo lời gọi** qua các lớp (`--until`, `--layers` dùng bản này), `--steps` in mọi bước. Trong bản `--calls`:
 
 - Bước đánh số: lời gọi tới code của dự án, đọc nguồn (`read "accessToken"`, `GET …`), ghi nơi lưu trữ (`write "lastUpdated"`), subscription (`viewModel.$title.sink`). Nhánh lỗi không đánh số.
 - `success` / `failure` gắn với bước có thể thất bại gần nhất: dữ liệu ghi vào ViewModel (hoặc property của view UIKit) khi thành công, nguồn của nó (đường dẫn JSON, key) và item hiển thị nó; với type của dự án (phần tử của mảng sau `map`), mỗi field ghi field JSON nguồn, `(formatted)` khi giá trị được ghép/định dạng. `failure` gồm nhánh `catch`, closure failure, `.failure`, optional binding hoặc ép kiểu thất bại (`cast fails (domain)`), việc handler làm (`↳`), handler rỗng, `try?` bỏ qua lỗi; request không có xử lý lỗi nào ghi `failure  ⚠ not handled`.
 - `writes`: ghi của bước không thể thất bại (reset trạng thái, cập nhật label trong subscription).
 - `⚠ stops`: luồng dừng ở ép kiểu luôn thất bại; ghi phía sau đánh dấu `⚠ never runs`.
+- `--until Repository` (tool MCP: `until`): giữ **mọi** bước từ view xuống tới Repository: ViewModel, UseCase, Mapper, toán tử biến đổi dữ liệu (`Just(()) → compactMap { jsonData.data(using: .utf8) } → tryMap { … }`), subscription (`sink`), điều kiện của bước (`if let domain = domain as? Mapper.EntityResult → …`), các phép ghi ở lớp giữa. Phần chạy bên dưới Repository (Service, API client) gộp thành ghi chú của bước Repository (`→ GET /v1/products`, `→ read "accessToken"`). Request được xử lý trong một subscription thì bước đó ghi `success/failure → step 5` và `success`/`failure` nằm ở subscription.
 - `--layers ViewModel,Repository` (tool MCP: `layers`): chỉ giữ bước của các lớp đó. Nguồn dữ liệu của bước bị ẩn thành ghi chú của bước còn giữ phía trên (`ProductRepositoryImpl.products() (→ read "accessToken"; → GET /v1/products → ProductListResponse)`), `success`/`failure`/`writes` chuyển theo; luồng không có bước nào thuộc các lớp đó bị bỏ.
 
 JSON có cả `steps` và `summary`.

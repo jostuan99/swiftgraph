@@ -2,129 +2,388 @@
   "name": "swiftui",
   "description": "SwiftUI views and modifiers that show or edit data, list rows, entry points",
   "whenImports": ["SwiftUI"],
-  "layers": [{ "id": "swiftui.view", "layer": "View", "match": { "conformsTo": "View" } }],
+  "layers": [
+    {
+      "id": "swiftui.view",
+      "layer": "View",
+      "match": {
+        "conformsTo": "View"
+      }
+    }
+  ],
   "sinks": [
     {
       "id": "swiftui.text",
       "call": "Text(_:tableName:bundle:comment:)",
       "direction": "display",
-      "arguments": { "0": { "role": "text", "localized": true } }
+      "arguments": {
+        "0": {
+          "role": "text",
+          "localized": true
+        }
+      }
     },
-    { "id": "swiftui.text-verbatim", "call": "Text(verbatim:)", "direction": "display", "arguments": { "verbatim": { "role": "text" } } },
+    {
+      "id": "swiftui.text-verbatim",
+      "call": "Text(verbatim:)",
+      "direction": "display",
+      "arguments": {
+        "verbatim": {
+          "role": "text"
+        }
+      }
+    },
     {
       "id": "swiftui.textfield",
       "call": "TextField(_:text:prompt:axis:)",
       "direction": "input",
       "arguments": {
-        "0": { "role": "placeholder", "localized": true },
-        "text": { "role": "text", "direction": "input" },
-        "prompt": { "role": "prompt" }
+        "0": {
+          "role": "placeholder",
+          "localized": true
+        },
+        "text": {
+          "role": "text",
+          "direction": "input"
+        },
+        "prompt": {
+          "role": "prompt"
+        }
       }
     },
     {
       "id": "swiftui.securefield",
       "call": "SecureField(_:text:prompt:)",
       "direction": "input",
-      "arguments": { "0": { "role": "placeholder", "localized": true }, "text": { "role": "text", "direction": "input" } }
+      "arguments": {
+        "0": {
+          "role": "placeholder",
+          "localized": true
+        },
+        "text": {
+          "role": "text",
+          "direction": "input"
+        }
+      }
     },
     {
       "id": "swiftui.texteditor",
       "call": "TextEditor(text:)",
       "direction": "input",
-      "arguments": { "text": { "role": "text", "direction": "input" } }
+      "arguments": {
+        "text": {
+          "role": "text",
+          "direction": "input"
+        }
+      }
     },
     {
       "id": "swiftui.button-title",
       "call": "Button(_:role:action:)",
       "direction": "action",
-      "arguments": { "0": { "role": "label", "localized": true }, "action": { "role": "action", "direction": "action" } }
+      "arguments": {
+        "0": {
+          "role": "label",
+          "localized": true
+        },
+        "action": {
+          "role": "action",
+          "direction": "action"
+        }
+      }
     },
     {
       "id": "swiftui.button",
       "call": "Button(role:action:label:)",
       "direction": "action",
-      "arguments": { "action": { "role": "action", "direction": "action" }, "label": { "role": "label", "content": true } }
+      "arguments": {
+        "action": {
+          "role": "action",
+          "direction": "action"
+        },
+        "label": {
+          "role": "label",
+          "content": true
+        }
+      }
     },
     {
       "id": "swiftui.label",
       "call": "Label(_:systemImage:)",
       "direction": "display",
-      "arguments": { "0": { "role": "text", "localized": true }, "systemImage": { "role": "image" } }
+      "arguments": {
+        "0": {
+          "role": "text",
+          "localized": true
+        },
+        "systemImage": {
+          "role": "image"
+        }
+      }
     },
     {
       "id": "swiftui.label-image",
       "call": "Label(_:image:)",
       "direction": "display",
-      "arguments": { "0": { "role": "text", "localized": true }, "image": { "role": "image" } }
+      "arguments": {
+        "0": {
+          "role": "text",
+          "localized": true
+        },
+        "image": {
+          "role": "image"
+        }
+      }
     },
-    { "id": "swiftui.image", "call": "Image(_:bundle:)", "direction": "display", "arguments": { "0": { "role": "image" } } },
+    {
+      "id": "swiftui.image",
+      "call": "Image(_:bundle:)",
+      "direction": "display",
+      "arguments": {
+        "0": {
+          "role": "image"
+        }
+      }
+    },
     {
       "id": "swiftui.image-system",
       "call": "Image(systemName:)",
       "direction": "display",
-      "arguments": { "systemName": { "role": "image" } }
+      "arguments": {
+        "systemName": {
+          "role": "image"
+        }
+      }
     },
-    { "id": "swiftui.asyncimage", "call": "AsyncImage(url:scale:)", "direction": "display", "arguments": { "url": { "role": "image" } } },
+    {
+      "id": "swiftui.asyncimage",
+      "call": "AsyncImage(url:scale:)",
+      "direction": "display",
+      "arguments": {
+        "url": {
+          "role": "image"
+        }
+      }
+    },
     {
       "id": "swiftui.toggle",
       "call": "Toggle(_:isOn:)",
       "direction": "input",
-      "arguments": { "0": { "role": "label", "localized": true }, "isOn": { "role": "value", "direction": "input" } }
+      "arguments": {
+        "0": {
+          "role": "label",
+          "localized": true
+        },
+        "isOn": {
+          "role": "value",
+          "direction": "input"
+        }
+      }
     },
     {
       "id": "swiftui.picker",
       "call": "Picker(_:selection:content:)",
       "direction": "input",
-      "arguments": { "0": { "role": "label", "localized": true }, "selection": { "role": "value", "direction": "input" } }
+      "arguments": {
+        "0": {
+          "role": "label",
+          "localized": true
+        },
+        "selection": {
+          "role": "value",
+          "direction": "input"
+        }
+      }
     },
     {
       "id": "swiftui.slider",
       "call": "Slider(value:in:step:)",
       "direction": "input",
-      "arguments": { "value": { "role": "value", "direction": "input" } }
+      "arguments": {
+        "value": {
+          "role": "value",
+          "direction": "input"
+        }
+      }
     },
     {
       "id": "swiftui.stepper",
       "call": "Stepper(_:value:in:)",
       "direction": "input",
-      "arguments": { "0": { "role": "label", "localized": true }, "value": { "role": "value", "direction": "input" } }
+      "arguments": {
+        "0": {
+          "role": "label",
+          "localized": true
+        },
+        "value": {
+          "role": "value",
+          "direction": "input"
+        }
+      }
     },
     {
       "id": "swiftui.datepicker",
       "call": "DatePicker(_:selection:displayedComponents:)",
       "direction": "input",
-      "arguments": { "0": { "role": "label", "localized": true }, "selection": { "role": "value", "direction": "input" } }
+      "arguments": {
+        "0": {
+          "role": "label",
+          "localized": true
+        },
+        "selection": {
+          "role": "value",
+          "direction": "input"
+        }
+      }
     },
     {
       "id": "swiftui.progress",
       "call": "ProgressView(_:value:total:)",
       "direction": "display",
-      "arguments": { "0": { "role": "text", "localized": true }, "value": { "role": "value" } }
+      "arguments": {
+        "0": {
+          "role": "text",
+          "localized": true
+        },
+        "value": {
+          "role": "value"
+        }
+      }
     },
     {
       "id": "swiftui.navigation-title",
       "call": "*.navigationTitle(_:)",
       "item": "navigationTitle",
       "direction": "display",
-      "arguments": { "0": { "role": "title", "localized": true } }
+      "arguments": {
+        "0": {
+          "role": "title",
+          "localized": true
+        }
+      }
+    },
+    {
+      "id": "swiftui.alert",
+      "call": "*.alert(_:isPresented:actions:message:)",
+      "item": "alert",
+      "direction": "display",
+      "arguments": {
+        "0": {
+          "role": "title",
+          "localized": true
+        },
+        "isPresented": {
+          "role": "shown"
+        },
+        "actions": {
+          "role": "actions"
+        },
+        "message": {
+          "role": "message",
+          "content": true
+        }
+      }
+    },
+    {
+      "id": "swiftui.alert-actions",
+      "call": "*.alert(_:isPresented:actions:)",
+      "item": "alert",
+      "direction": "display",
+      "arguments": {
+        "0": {
+          "role": "title",
+          "localized": true
+        },
+        "isPresented": {
+          "role": "shown"
+        },
+        "actions": {
+          "role": "actions"
+        }
+      }
     }
   ],
   "itemViews": [
-    { "id": "swiftui.rows", "closureOf": ["List", "ForEach"] },
-    { "id": "swiftui.row-name", "match": { "name": ["*Row", "*Cell"], "conformsTo": "View" } }
+    {
+      "id": "swiftui.rows",
+      "closureOf": ["List", "ForEach"]
+    },
+    {
+      "id": "swiftui.row-name",
+      "match": {
+        "name": ["*Row", "*Cell"],
+        "conformsTo": "View"
+      }
+    }
   ],
   "flowThrough": [
-    { "id": "swiftui.list", "call": "List", "closures": { "trailing": { "parameters": ["argument:0[]"] } } },
-    { "id": "swiftui.foreach", "call": "ForEach", "closures": { "trailing": { "parameters": ["argument:0[]"] } } }
+    {
+      "id": "swiftui.list",
+      "call": "List",
+      "closures": {
+        "trailing": {
+          "parameters": ["argument:0[]"]
+        }
+      }
+    },
+    {
+      "id": "swiftui.foreach",
+      "call": "ForEach",
+      "closures": {
+        "trailing": {
+          "parameters": ["argument:0[]"]
+        }
+      }
+    }
   ],
   "entryPoints": [
-    { "id": "swiftui.button-action", "call": "Button", "closure": "action", "kind": "action" },
-    { "id": "swiftui.on-appear", "call": "*.onAppear(perform:)", "closure": "perform", "kind": "appear" },
-    { "id": "swiftui.task", "call": "*.task(priority:_:)", "closure": "trailing", "kind": "task" },
-    { "id": "swiftui.on-tap", "call": "*.onTapGesture(count:perform:)", "closure": "perform", "kind": "action" },
-    { "id": "swiftui.refreshable", "call": "*.refreshable(action:)", "closure": "action", "kind": "refresh" },
-    { "id": "swiftui.on-receive", "call": "*.onReceive(_:perform:)", "closure": "perform", "kind": "receive" },
-    { "id": "swiftui.on-change", "call": "*.onChange(of:initial:_:)", "closure": "trailing", "kind": "change" },
-    { "id": "swiftui.on-submit", "call": "*.onSubmit(of:_:)", "closure": "trailing", "kind": "action" }
+    {
+      "id": "swiftui.button-action",
+      "call": "Button",
+      "closure": "action",
+      "kind": "action"
+    },
+    {
+      "id": "swiftui.on-appear",
+      "call": "*.onAppear(perform:)",
+      "closure": "perform",
+      "kind": "appear"
+    },
+    {
+      "id": "swiftui.task",
+      "call": "*.task(priority:_:)",
+      "closure": "trailing",
+      "kind": "task"
+    },
+    {
+      "id": "swiftui.on-tap",
+      "call": "*.onTapGesture(count:perform:)",
+      "closure": "perform",
+      "kind": "action"
+    },
+    {
+      "id": "swiftui.refreshable",
+      "call": "*.refreshable(action:)",
+      "closure": "action",
+      "kind": "refresh"
+    },
+    {
+      "id": "swiftui.on-receive",
+      "call": "*.onReceive(_:perform:)",
+      "closure": "perform",
+      "kind": "receive"
+    },
+    {
+      "id": "swiftui.on-change",
+      "call": "*.onChange(of:initial:_:)",
+      "closure": "trailing",
+      "kind": "change"
+    },
+    {
+      "id": "swiftui.on-submit",
+      "call": "*.onSubmit(of:_:)",
+      "closure": "trailing",
+      "kind": "action"
+    }
   ]
 }

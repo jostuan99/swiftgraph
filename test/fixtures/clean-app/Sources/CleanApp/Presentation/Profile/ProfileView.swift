@@ -12,5 +12,10 @@ struct ProfileView: View {
         .task {
             await viewModel.load()
         }
+        .alert("profile.error.title", isPresented: $viewModel.showsError) {
+            Button("common.ok", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
     }
 }
