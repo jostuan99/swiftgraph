@@ -25,7 +25,7 @@ import type {
 } from '../schema/types.ts';
 
 /** Bump when the extracted facts change, so cached facts are re-extracted. */
-export const EXTRACTOR_VERSION = 10;
+export const EXTRACTOR_VERSION = 11;
 
 const DECLARATION_KINDS: Readonly<Record<string, DeclarationKind>> = {
   class_declaration: 'class',
@@ -426,8 +426,8 @@ class Extractor {
           .filter((child) => child.type === 'attribute')
           .map((child) => typeName(child.childForFieldName('name')) ?? child.text)
       : [];
-    const access = modifierWords.map((word) => word.replace(/\(set\)$/, '')).find((word) => ACCESS_LEVELS.has(word)) as
-      AccessLevel | undefined;
+    // `private(set)` limits the setter only: the declaration keeps its own (or the default) access.
+    const access = modifierWords.find((word) => ACCESS_LEVELS.has(word)) as AccessLevel | undefined;
 
     const name = explicitName ?? declarationName(node, kind);
     const declaration: Declaration = {

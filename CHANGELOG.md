@@ -56,6 +56,7 @@
 
 ### Sửa lỗi
 
+- `private(set) var` được lưu với access `private`; nay chỉ setter bị giới hạn, declaration giữ access của nó (mặc định `internal`). Database cũ được trích lại khi build.
 - Lời gọi và phép gán qua optional chain (`viewModel?.state = .main`, `viewModel?.login()`) mất receiver nên không thành edge.
 - Partial update làm mất edge của extension nằm dưới chỗ sửa (ID extension nay là số thứ tự trong file); symbol khai báo ở hai file; build bị dừng giữa chừng để lại graph cũ.
 

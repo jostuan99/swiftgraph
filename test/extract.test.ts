@@ -139,15 +139,19 @@ test('doc comments, access levels and attributes', () => {
       @Published private(set) var x = 0
       // not a doc comment
       func f() {}
+      public private(set) var y = 0
     }
   `);
-  const [a, x, f] = facts.declarations;
+  const [a, x, f, y] = facts.declarations;
   assert.equal(a?.doc, 'First line.\nSecond line.');
   assert.deepEqual(a?.attributes, ['MainActor']);
   assert.equal(a?.access, 'public');
   assert.deepEqual(a?.modifiers, ['public', 'final']);
   assert.equal(x?.doc, 'Block doc.');
-  assert.equal(x?.access, 'private');
+  // `private(set)` limits the setter, not the getter.
+  assert.equal(x?.access, null);
+  assert.deepEqual(x?.modifiers, ['private(set)']);
+  assert.equal(y?.access, 'public');
   assert.equal(f?.doc, null);
 });
 
