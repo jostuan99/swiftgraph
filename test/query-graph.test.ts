@@ -4,7 +4,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { build } from '../src/build.ts';
-import { findPath, impact, neighbors, readSource, resolveSymbol, searchSymbols, SourceAccessError, traverse } from '../src/query/graph.ts';
+import {
+  findPath,
+  impact,
+  neighbors,
+  outline,
+  readSource,
+  resolveSymbol,
+  searchSymbols,
+  SourceAccessError,
+  traverse,
+} from '../src/query/graph.ts';
+import { formatOutline } from '../src/query/text.ts';
 import { databasePath, openDatabase } from '../src/store/db.ts';
 import { fixtureCopy } from './helpers.ts';
 
@@ -41,6 +52,47 @@ test('symbol lookup, search, neighbors and traversals', async () => {
     const callers = traverse(db, send, 'in', { depth: 2 }).map((row) => `${row.depth} ${row.symbolId}`);
     assert.ok(callers.includes('1 swift:App/AppView.body'));
     assert.ok(callers.includes('2 swift:AppTests/previewHasOneItem()'));
+
+    // Calls through a protocol requirement continue to its implementations and their overrides.
+    const callees = traverse(db, send, 'out', { depth: 1 });
+    const log = callees.find((row) => row.symbolId === 'swift:Core/Logging.log(_:)')!;
+    assert.deepEqual(log.dispatch.map((row) => row.symbolId).sort(), [
+      'swift:Core/ConsoleLogger.log(_:)',
+      'swift:Core/PrefixLogger.log(_:)',
+    ]);
+    // And the callers of an implementation include those that call the requirement.
+    const viaProtocol = traverse(db, id(db, 'ConsoleLogger.log(_:)'), 'in', { depth: 1 });
+    const sender = viaProtocol.find((row) => row.symbolId === 'swift:Core/Store.send(_:)')!;
+    assert.deepEqual(
+      sender.dispatch.map((row) => row.symbolId),
+      ['swift:Core/Logging.log(_:)'],
+    );
+    const deeper = traverse(db, id(db, 'ConsoleLogger.log(_:)'), 'in', { depth: 2 });
+    assert.equal(deeper.find((row) => row.symbolId === 'swift:App/AppView.body')?.parent, sender.id);
+  });
+});
+
+test('outline of a file and of a type with its extensions', async () => {
+  await withFixture((_root, db) => {
+    const store = outline(db, { symbol: id(db, 'Core.Store') });
+    assert.deepEqual(
+      store.map((row) => `${row.depth} ${row.file}:${row.line} ${row.name}`),
+      [
+        '0 Sources/Core/Store.swift:9 Store',
+        '1 Sources/Core/Store.swift:10 items',
+        '1 Sources/Core/Store.swift:11 logger',
+        '1 Sources/Core/Store.swift:13 init(logger:)',
+        '1 Sources/Core/Store.swift:17 send(_:)',
+        '1 Sources/Core/Store.swift:22 reduce(_:)',
+        '1 Sources/Core/Store.swift:31 preview()',
+        '0 Sources/Core/Store+Observation.swift:3 Store',
+        '1 Sources/Core/Store+Observation.swift:4 count',
+      ],
+    );
+    const text = formatOutline(db, 'Core/Store.swift');
+    assert.ok(text.startsWith('Sources/Core/Store.swift\n3-6 public enum Action\n  4 case add(Item)\n'));
+    assert.ok(text.includes('\n9-36 public final class Store<State>  /// Holds the items and applies actions to them.\n'));
+    assert.ok(text.includes('\n  10 @Published public private(set) var items: [Item]\n'));
   });
 });
 

@@ -1,4 +1,5 @@
 import Combine
+import SwiftUI
 import UIKit
 
 final class ProductListViewController: UIViewController, UITableViewDataSource {
@@ -61,6 +62,14 @@ final class ProductListViewController: UIViewController, UITableViewDataSource {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ProductCell", for: indexPath) as! ProductCell
         cell.configure(with: viewModel.rows[indexPath.row])
         return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.row == 0 {
+            navigationController?.pushViewController(ProfileViewController(), animated: true)
+        } else {
+            present(UIHostingController(rootView: ProfileView()), animated: true)
+        }
     }
 }
 

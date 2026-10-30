@@ -35,7 +35,13 @@ Chạy lại `build` sau khi sửa code. swiftgraph chỉ parse lại file có n
 | `partial` | chỉ sửa thân hàm, comment hoặc doc (khai báo giữ nguyên), tối đa 50 file | khoảng 0,7 s |
 | `full` | thêm, xoá, đổi tên khai báo; xoá file; sửa `Package.swift` hoặc file localization | khoảng 10 s |
 
-`swiftgraph install --targets git` (mục 3) thêm git hook chạy `build` nền sau commit, checkout và merge.
+`sync` cập nhật database có sẵn theo cùng cách, nhưng dùng lại tuỳ chọn của lần `build` trước (`--exclude`, `--git-tracked-only`, `--no-string-values`, `--languages`; `--module` vốn đã được lưu). Dùng `sync` sau khi sửa code để không phải nhắc lại các tuỳ chọn; `--list` in các file thêm/sửa (`~`) và bị xoá (`-`). Chưa có database thì `sync` báo lỗi và yêu cầu chạy `build`.
+
+```sh
+swiftgraph sync /path/to/MyApp --list
+```
+
+`swiftgraph install --targets git` (mục 3) thêm git hook chạy `sync` nền sau commit, checkout và merge.
 
 Kiểm tra và dọn:
 
@@ -100,18 +106,19 @@ Chỉ thêm MCP server (Claude Code):
 claude mcp add swiftgraph -- node /path/to/swiftgraph/src/cli.ts mcp /path/to/MyApp
 ```
 
-MCP server chỉ đọc, gồm 14 tool:
+MCP server chỉ đọc, gồm 17 tool:
 
 | Tool | Trả lời |
 |------|---------|
-| `graph_overview` | tổng quan: module, khu vực chức năng, symbol quan trọng, entry point |
+| `graph_overview` | tổng quan: module, khu vực chức năng, màn hình, symbol quan trọng, entry point |
 | `search_symbols` | tìm khai báo theo tên hoặc doc |
 | `get_symbol` | chữ ký, doc, khu vực và quan hệ của một symbol |
 | `get_neighbors` | quan hệ trực tiếp |
-| `get_callers`, `get_callees` | ai gọi, gọi ai (nhiều cấp) |
+| `get_callers`, `get_callees` | ai gọi, gọi ai (nhiều cấp, dạng cây; lời gọi qua protocol đi tiếp tới implementation) |
 | `find_path` | chuỗi quan hệ ngắn nhất giữa hai symbol |
 | `get_impact` | sửa file hoặc symbol này có thể ảnh hưởng gì, kể cả test |
 | `get_community` | một khu vực chức năng của codebase |
+| `get_outline` | chữ ký và dòng của các khai báo trong một file, hoặc một type kèm extension, không có thân hàm |
 | `get_source` | source của một khai báo |
 | `search_strings`, `get_string`, `get_strings_for_symbol`, `get_localization_issues` | chuỗi localization |
 | `get_screen_definition` | item của màn hình và nguồn dữ liệu của từng item (`define`) |
@@ -131,6 +138,7 @@ swiftgraph callees 'AppView.body'
 swiftgraph path MiniApp.body 'Logging.log(_:)'
 swiftgraph impact Sources/Core/Model.swift
 swiftgraph area Store
+swiftgraph outline Sources/Core/Store.swift          # hoặc: swiftgraph outline Store
 swiftgraph source 'Store.reduce(_:)' --context 2
 swiftgraph view . --open                           # trang HTML xem graph, không truy cập mạng: tìm symbol, neighbor, ẩn/hiện area
 ```
@@ -162,7 +170,7 @@ swiftgraph define LoginView --item LoginView#5      # một item, in đủ đư�
 swiftgraph define LoginView --detail                # thêm DATA (đường đi của từng giá trị) và CONDITIONS
 swiftgraph define LoginView --format compact        # ít token nhất (mặc định của tool MCP); --format pretty: căn cột cho người đọc
 swiftgraph define LoginView --format json           # hoặc markdown
-swiftgraph flows LoginView                          # mỗi bước là get/set dữ liệu (API, storage, biến ViewModel), success/failure đổi dữ liệu gì
+swiftgraph flows LoginView                          # INPUT (dữ liệu nhận vào), mỗi bước là get/set dữ liệu (API, storage, biến ViewModel), OUTPUT (push/modal kèm parameter)
 swiftgraph flows LoginView --calls                  # các lời gọi qua từng lớp, đánh số
 swiftgraph flows LoginView --steps                  # mọi bước theo thứ tự thực thi
 swiftgraph flows LoginView --until Repository       # từ view tới Repository, giữ mọi logic và mapping ở giữa
@@ -171,11 +179,44 @@ swiftgraph flows LoginView --entry LoginView#5      # luồng của một item (
 swiftgraph flows LoginView --format mermaid         # sequence diagram theo lớp kiến trúc
 ```
 
+Localization qua enum hoặc object của dự án: khai báo member (hoặc method) trả chuỗi đã dịch và nơi lấy key:
+
+```yaml
+# swiftgraph.yaml
+sources:
+  - { id: app.localization, kind: localization, member: Localization.localized, keyFrom: rawValue }
+  - { id: app.l10n, kind: localization, call: L10n.text(), keyFrom: rawValue }
+  - { id: app.key, kind: localization, member: LocalizedKey.text, keyFrom: key }
+  - { id: app.string, kind: localization, member: String.localized, keyFrom: self }
+```
+
+`Localization.loginFirstName.localized` khi đó là `localized "First Name"` (chữ ở ngôn ngữ mặc định; `localized missing` khi ngôn ngữ mặc định không có chữ). `keyFrom`: `rawValue`, `case`, `self` hoặc tên property của giá trị.
+
+Rule cho `INPUT`/`OUTPUT` theo hệ thống của dự án (router, coordinator, method nhận dữ liệu như `configure(with:)`): in template từ rule đang áp dụng, sửa, giữ `id` để thay rule của preset:
+
+```sh
+swiftgraph rules                                    # rule inputs, navigation, localization (ngôn ngữ mặc định) đang áp dụng, dạng YAML
+swiftgraph rules --kind all                         # mọi loại rule
+swiftgraph rules --write                            # ghi vào file rule (chưa có thì swiftgraph.yaml), giữ các key khác
+```
+
+```yaml
+# swiftgraph.yaml
+navigation:
+  - { id: app.router-push, call: "AppRouter.push(_:animated:)", destination: [ 0 ], transition: push }
+  - { id: app.show-detail, call: "AppCoordinator.showDetail(id:)", destination: [], to: DetailViewController, transition: replace }
+inputs:
+  - { id: app.configure, kind: configure, method: "configure(with:)", match: { inherits: UIViewController } }
+  - { id: app.injected, kind: injected, attribute: Injected }
+localization:
+  - { id: app.default-language, module: MyApp, defaultLanguage: ja }
+```
+
 Tool MCP tương ứng: `get_screen_definition`, `get_screen_flows`; mặc định trả `compact`. Server gửi kèm instruction (`INSTRUCTIONS` trong `src/mcp.ts`) giải thích cách đọc output của hai tool này cho agent.
 
 Tiết kiệm token khi agent đọc: hỏi hẹp (`--item`, `--entry`, `--source api`, `--no-children`), dùng `compact`, chỉ thêm `--detail`/`--steps` khi cần. `text` (mặc định) và `compact` đều không căn cột, ghi file một lần cho các dòng liên tiếp (`@:49`), đưa host API, view model, binding DI lên legend đầu output (`# api = https://api.example.com`, `# vm = ProductListViewModel`, `# di: …`), chỉ ghi tag lớp khi lớp đổi và bỏ tên màn hình trước method của nó; `compact` thụt lề 1 khoảng và bỏ dòng gợi ý. `--format pretty` in bản căn cột. Trên fixture, so với `pretty`: `define` còn 55–80%, `flows` còn 50–65%.
 
-Kiến trúc của dự án khai báo trong `swiftgraph.json` ở gốc repo (không bắt buộc). Không có file thì preset được chọn theo `import` của dự án: `swiftui`, `uikit`, `combine`, `alamofire`, `swinject`, `coredata`, `swiftdata` khi có import tương ứng; `concurrency`, `foundation-storage`, `mvvm-clean` luôn bật. Ví dụ khai báo wrapper Keychain riêng:
+Kiến trúc của dự án khai báo trong `swiftgraph.yaml` (hoặc `.yml`, `swiftgraph.json`) ở gốc repo (không bắt buộc, mỗi dự án một file). Không có file thì preset được chọn theo `import` của dự án: `swiftui`, `uikit`, `combine`, `alamofire`, `swinject`, `coredata`, `swiftdata` khi có import tương ứng; `swift`, `concurrency`, `foundation-storage`, `mvvm-clean` luôn bật. Ví dụ khai báo wrapper Keychain riêng:
 
 ```json
 {

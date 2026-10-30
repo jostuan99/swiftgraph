@@ -12,6 +12,11 @@ struct ProductListView: View {
             .task {
                 await viewModel.reload()
             }
+            .toolbar {
+                NavigationLink(destination: ProfileView(title: viewModel.title)) {
+                    Text("profile.open")
+                }
+            }
         }
     }
 }

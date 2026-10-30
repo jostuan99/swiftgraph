@@ -7,7 +7,9 @@ import {
   findPath,
   impact,
   neighbors,
+  outline,
   readSource,
+  resolveFile,
   resolveSymbol,
   searchSymbols,
   traverse,
@@ -58,9 +60,59 @@ function location(row: { file: string | null; line: number | null }): string {
   return row.file ? `${row.file}:${row.line ?? 1}` : '';
 }
 
-function heading(row: SymbolRow): string {
-  const access = row.access ? `, ${row.access}` : '';
-  return `${row.qualifiedName}  [${row.kind}${access}${row.file ? `, ${location(row)}` : ''}]`;
+const modulePrefixes = new WeakMap<Db, string | null>();
+
+/** `App.` when the project has a single module with declarations, else null. */
+export function modulePrefix(db: Db): string | null {
+  if (!modulePrefixes.has(db)) {
+    const names = db
+      .prepare(
+        `SELECT m.name FROM modules m WHERE m.kind = 'target' AND EXISTS (
+           SELECT 1 FROM files f JOIN nodes n ON n.file_id = f.id
+           WHERE f.module_id = m.id AND n.kind IN ('class', 'struct', 'enum', 'actor', 'protocol', 'extension', 'function'))`,
+      )
+      .pluck()
+      .all() as string[];
+    modulePrefixes.set(db, names.length === 1 ? `${names[0]}.` : null);
+  }
+  return modulePrefixes.get(db)!;
+}
+
+/**
+ * Names and locations as printed, to repeat as little as possible: without the
+ * module when the project has only one, and `:N` for a line in the file named
+ * on the line before.
+ */
+class Printer {
+  private lastFile: string | null = null;
+  private readonly prefix: string | null;
+
+  constructor(db: Db) {
+    this.prefix = modulePrefix(db);
+  }
+
+  /** `subject` shortens its members to `.member`. */
+  name(row: { qualifiedName: string }, subject?: { qualifiedName: string }): string {
+    const name = row.qualifiedName;
+    if (subject && name.startsWith(`${subject.qualifiedName}.`)) return name.slice(subject.qualifiedName.length);
+    return this.prefix && name.startsWith(this.prefix) ? name.slice(this.prefix.length) : name;
+  }
+
+  at(row: { file: string | null; line: number | null }): string {
+    if (!row.file) return '';
+    const same = row.file === this.lastFile;
+    this.lastFile = row.file;
+    return same ? `:${row.line ?? 1}` : location(row);
+  }
+
+  heading(row: SymbolRow): string {
+    const access = row.access ? `, ${row.access}` : '';
+    return `${this.name(row)}  [${row.kind}${access}${row.file ? `, ${this.at(row)}` : ''}]`;
+  }
+}
+
+function confidence(row: { confidence: string }): string {
+  return row.confidence === 'EXTRACTED' ? '' : ` (${row.confidence.toLowerCase()})`;
 }
 
 /** A symbol from user text, or a message listing candidates. */
@@ -82,13 +134,16 @@ export function formatSearch(db: Db, query: string, kinds: string[] | undefined,
   const writer = new Writer(budget);
   const rows = searchSymbols(db, query, { ...(kinds ? { kinds } : {}), limit });
   if (rows.length === 0) return `no symbols match "${query}"`;
-  for (const row of rows) writer.line(`${row.symbolId}  [${row.kind}, ${location(row)}]`);
+  const printer = new Printer(db);
+  for (const row of rows) writer.line(`${printer.name(row)}  [${row.kind}${row.file ? `, ${printer.at(row)}` : ''}]`);
   return writer.toString();
 }
 
+/** Neighbors by direction and edge kind; the file of the symbol is left out (the heading names it). */
 function groupNeighbors(rows: Neighbor[]): Map<string, Neighbor[]> {
   const groups = new Map<string, Neighbor[]>();
   for (const row of rows) {
+    if (row.kind === 'file') continue;
     const key = `${row.direction === 'out' ? '→' : '←'} ${row.edgeKind}`;
     groups.set(key, [...(groups.get(key) ?? []), row]);
   }
@@ -99,7 +154,8 @@ export function formatSymbol(db: Db, text: string, budget = DEFAULT_BUDGET): str
   const { symbol, message } = pickSymbol(db, text);
   if (!symbol) return message!;
   const writer = new Writer(budget);
-  writer.line(heading(symbol));
+  const printer = new Printer(db);
+  writer.line(printer.heading(symbol));
   if (symbol.signature) writer.line(`  ${symbol.signature}`);
   if (symbol.doc) writer.line(`  /// ${symbol.doc.replaceAll('\n', ' ').slice(0, 300)}`);
   if (symbol.conditions) writer.line(`  #if ${(JSON.parse(symbol.conditions) as string[]).join(' | ')}`);
@@ -108,9 +164,7 @@ export function formatSymbol(db: Db, text: string, budget = DEFAULT_BUDGET): str
     writer.line(`  area: #${symbol.community} ${label ?? ''}`);
   }
   for (const [group, rows] of groupNeighbors(neighbors(db, symbol.id, { limit: 200 }))) {
-    const shown = rows
-      .slice(0, 6)
-      .map((row) => `${row.qualifiedName}${row.confidence === 'EXTRACTED' ? '' : ` (${row.confidence.toLowerCase()})`}`);
+    const shown = rows.slice(0, 6).map((row) => `${printer.name(row, symbol)}${confidence(row)}`);
     writer.line(`  ${group} (${rows.length}): ${shown.join(' · ')}${rows.length > 6 ? ' · …' : ''}`);
   }
   return writer.toString();
@@ -125,11 +179,14 @@ export function formatNeighbors(
   const { symbol, message } = pickSymbol(db, text);
   if (!symbol) return message!;
   const writer = new Writer(budget);
-  writer.line(heading(symbol));
+  const printer = new Printer(db);
+  writer.line(printer.heading(symbol));
   const rows = neighbors(db, symbol.id, { limit: options.limit ?? 50, ...options });
   if (rows.length === 0) writer.line('  no neighbors');
-  for (const row of rows) {
-    writer.line(`  ${row.direction === 'out' ? '→' : '←'} ${row.edgeKind}  ${row.qualifiedName}  ${location(row)}  ${row.confidence}`);
+  for (const [group, members] of groupNeighbors(rows)) {
+    writer.line(`  ${group}`);
+    for (const row of members)
+      writer.line(`    ${[printer.name(row, symbol), printer.at(row)].filter(Boolean).join('  ')}${confidence(row)}`);
   }
   return writer.toString();
 }
@@ -144,10 +201,27 @@ export function formatTraversal(
   const { symbol, message } = pickSymbol(db, text);
   if (!symbol) return message!;
   const writer = new Writer(budget);
-  writer.line(`${heading(symbol)}\n  ${direction === 'in' ? 'callers' : 'callees'} (depth ≤ ${options.depth ?? 3}):`);
+  const printer = new Printer(db);
+  writer.line(`${printer.heading(symbol)}\n  ${direction === 'in' ? 'callers' : 'callees'} (depth ≤ ${options.depth ?? 3}):`);
   const rows = traverse(db, symbol.id, direction, options);
   if (rows.length === 0) writer.line('  none');
-  for (const row of rows) writer.line(`  ${'  '.repeat(row.depth - 1)}${row.depth}. ${row.qualifiedName}  ${location(row)}`);
+  // Depth first, so each node sits under the node it was reached from.
+  // SDK symbols are leaves: one line at the end.
+  const external = [...new Set(rows.filter((row) => row.kind === 'external_symbol').map((row) => row.qualifiedName))];
+  const children = new Map<number | null, typeof rows>();
+  for (const row of rows) {
+    if (row.kind !== 'external_symbol') children.set(row.parent, [...(children.get(row.parent) ?? []), row]);
+  }
+  const visit = (parent: number | null) => {
+    for (const row of children.get(parent) ?? []) {
+      const names = row.dispatch.map((other) => printer.name(other)).join(', ');
+      const dispatch = names ? (direction === 'in' ? `  via ${names}` : `  → ${names}`) : '';
+      writer.line(`  ${'  '.repeat(row.depth - 1)}${row.depth}. ${printer.name(row)}  ${printer.at(row)}${dispatch}`);
+      visit(row.id);
+    }
+  };
+  visit(null);
+  if (external.length > 0) writer.line(`  SDK: ${external.join(', ')}`);
   return writer.toString();
 }
 
@@ -157,7 +231,8 @@ export function formatPath(db: Db, fromText: string, toText: string, maxDepth = 
   const to = pickSymbol(db, toText);
   if (!to.symbol) return to.message!;
   const path = findPath(db, from.symbol.id, to.symbol.id, maxDepth);
-  if (!path) return `no path between ${from.symbol.qualifiedName} and ${to.symbol.qualifiedName} within ${maxDepth} steps`;
+  const printer = new Printer(db);
+  if (!path) return `no path between ${printer.name(from.symbol)} and ${printer.name(to.symbol)} within ${maxDepth} steps`;
   const writer = new Writer(budget);
   if (!path.directed) {
     writer.line(`no path along calls, instantiations or reads within ${maxDepth} steps; closest chain of relations (any direction):`);
@@ -168,7 +243,7 @@ export function formatPath(db: Db, fromText: string, toText: string, maxDepth = 
         `  ${step.edge.reversed ? '↑' : '↓'} ${step.edge.kind}${step.edge.reversed ? ' (reversed)' : ''}${step.edge.confidence === 'EXTRACTED' ? '' : ` ${step.edge.confidence.toLowerCase()}`}`,
       );
     }
-    writer.line(`${step.node.qualifiedName}  ${location(step.node)}`);
+    writer.line(`${printer.name(step.node)}  ${printer.at(step.node)}`.trimEnd());
   }
   return writer.toString();
 }
@@ -204,7 +279,8 @@ export function formatImpact(db: Db, input: { files?: string[]; symbols?: string
         .join(', ')}${ordered.length > 12 ? `, … ${ordered.length - 12} more` : ''}`,
     );
   }
-  for (const row of result.affected) writer.line(`  ${row.depth}. ${row.qualifiedName}  ${location(row)}`);
+  const printer = new Printer(db);
+  for (const row of result.affected) writer.line(`  ${row.depth}. ${printer.name(row)}  ${printer.at(row)}`.trimEnd());
   return writer.toString();
 }
 
@@ -213,7 +289,7 @@ export function formatCommunity(db: Db, idOrSymbol: string, budget = DEFAULT_BUD
   if (id === undefined) {
     const { symbol, message } = pickSymbol(db, idOrSymbol);
     if (!symbol) return message!;
-    if (symbol.community === null) return `${symbol.qualifiedName} belongs to no area`;
+    if (symbol.community === null) return `${new Printer(db).name(symbol)} belongs to no area`;
     id = symbol.community;
   }
   const info = community(db, id);
@@ -221,9 +297,46 @@ export function formatCommunity(db: Db, idOrSymbol: string, budget = DEFAULT_BUD
   const writer = new Writer(budget);
   writer.line(`area #${info.id} ${info.label}  (${info.size} declarations)`);
   writer.line('key members:');
-  for (const member of info.members) writer.line(`  ${member.qualifiedName}  [${member.kind}, ${location(member)}]`);
+  const printer = new Printer(db);
+  for (const member of info.members)
+    writer.line(`  ${printer.name(member)}  [${member.kind}${member.file ? `, ${printer.at(member)}` : ''}]`);
   if (info.links.length > 0)
     writer.line(`linked areas: ${info.links.map((link) => `#${link.community} ${link.label} (${link.edges})`).join('; ')}`);
+  return writer.toString();
+}
+
+/**
+ * Signatures of the declarations of a file, or of a type and its extensions,
+ * without bodies: what to read before get_source.
+ */
+export function formatOutline(db: Db, text: string, budget = DEFAULT_BUDGET): string {
+  let entries;
+  if (/\.swift$/.test(text) || text.includes('/')) {
+    const files = resolveFile(db, text);
+    if (files.length === 0) return `no Swift file matches "${text}"`;
+    if (files.length > 1) return `"${text}" matches several files; use one of:\n${files.map((file) => `  ${file}`).join('\n')}`;
+    entries = outline(db, { file: files[0]! });
+  } else {
+    const { symbol, message } = pickSymbol(db, text);
+    if (!symbol) return message!;
+    entries = outline(db, { symbol: symbol.id });
+  }
+  const writer = new Writer(budget);
+  let file: string | null = null;
+  for (const entry of entries) {
+    if (entry.file !== file) {
+      file = entry.file;
+      writer.line(file ?? '(no file)');
+    }
+    const lines = entry.endLine && entry.line && entry.endLine > entry.line ? `${entry.line}-${entry.endLine}` : `${entry.line ?? ''}`;
+    // Attributes first, as usually written: `@Published private(set) var`.
+    const words = entry.modifiers ? (JSON.parse(entry.modifiers) as string[]) : [];
+    const prefix = [...words.filter((word) => word.startsWith('@')), ...words.filter((word) => !word.startsWith('@'))]
+      .map((word) => `${word} `)
+      .join('');
+    const doc = entry.doc ? `  /// ${entry.doc.split('\n')[0]!.slice(0, 80)}` : '';
+    writer.line(`${'  '.repeat(entry.depth)}${lines} ${prefix}${entry.signature ?? `${entry.kind} ${entry.name}`}${doc}`);
+  }
   return writer.toString();
 }
 

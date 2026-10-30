@@ -7,7 +7,8 @@ import type { DeclarationInfo, TypeInfo } from '../resolve/resolve.ts';
 import type { CallSite, ValueExpr } from '../schema/types.ts';
 import { defineType, findScreens, pickScreen, type ScreenDefinition, type ScreenView } from './define.ts';
 import { apiName, tyText, type FlowEngine, type Frame, type Location, type Traced, type Ty } from './engine.ts';
-import { jsonPathText, shortSources, viewModelVariable } from './format-define.ts';
+import { jsonPathText, shortSources, shownText, viewModelVariable } from './format-define.ts';
+import { screenIO, type ScreenIO } from './screen-io.ts';
 
 export interface FlowsOptions {
   /** A flow id (`LoginView/F2`) or an item id from `define` (`LoginView#5`). */
@@ -31,7 +32,7 @@ export interface FlowsOptions {
 
 export interface FlowStep {
   depth: number;
-  kind: 'call' | 'source' | 'chain' | 'closure' | 'write' | 'external' | 'guard';
+  kind: 'call' | 'source' | 'chain' | 'closure' | 'write' | 'external' | 'guard' | 'navigation';
   text: string;
   layer?: string;
   at: Location;
@@ -156,6 +157,8 @@ export interface ScreenFlow {
 
 export interface ScreenFlows {
   view: ScreenView;
+  /** INPUT and OUTPUT of the screen; absent for one flow (`entry`). */
+  io?: ScreenIO;
   flows: ScreenFlow[];
 }
 
@@ -166,9 +169,12 @@ export function screenFlows(engine: FlowEngine, text: string, options: FlowsOpti
   if (!('type' in picked)) return picked;
   const definition = defineType(engine, picked.type, { children: options.children !== false });
   if (options.depth !== undefined) engine.depthLimit = options.depth;
-  const result = new FlowBuilder(engine, definition, options).build(picked.type);
+  const builder = new FlowBuilder(engine, definition, options);
+  const result = builder.build(picked.type);
   if (options.entry) {
     result.flows = result.flows.filter((flow) => flow.id === options.entry || flow.item === options.entry);
+  } else {
+    result.io = builder.io(picked.type);
   }
   if (options.until) {
     for (const flow of result.flows) flow.summary = collapseBelow(flow.summary, options.until.toLowerCase());
@@ -218,6 +224,8 @@ class FlowBuilder {
     this.collect(type);
     if (this.options.children !== false) {
       for (const child of this.definition.children) {
+        // Another screen reached by navigation has flows of its own.
+        if (child.how === 'navigation') continue;
         const childType = findScreens(this.engine, child.name)[0];
         if (childType && childType !== type) this.collect(childType);
       }
@@ -225,6 +233,16 @@ class FlowBuilder {
     const screen = this.definition.view.name;
     this.flows.forEach((flow, index) => (flow.id = `${screen}/F${index + 1}`));
     return { view: this.definition.view, flows: this.flows };
+  }
+
+  /** What the screen receives (INPUT) and the screens it shows (OUTPUT). */
+  io(type: TypeInfo): ScreenIO {
+    return screenIO(
+      this.engine,
+      type,
+      this.members(type),
+      (file, line) => this.definition.items.find((item) => item.owner === type.path && item.at.file === file && item.at.line === line)?.id,
+    );
   }
 
   private members(type: TypeInfo): DeclarationInfo[] {
@@ -411,7 +429,7 @@ class FlowBuilder {
     const item = this.definition.items.find((candidate) => candidate.id === id);
     const label = item?.data.find((data) => data.role === 'label' || data.role === 'title');
     const origin = label?.traced[0]?.origin;
-    if (origin?.kind === 'localization') return ` ${JSON.stringify(origin.key)}`;
+    if (origin?.kind === 'localization') return ` ${JSON.stringify(shownText(origin))}`;
     if (origin?.kind === 'literal') return ` ${JSON.stringify(origin.value)}`;
     return '';
   }
@@ -461,6 +479,8 @@ class Walker {
     const at = engine.location(frame, site.line);
     const when = relativeBranch(site.branch, base);
     const layer = engine.layerOf(frame.self);
+    // What a navigation call shows is another screen, with flows of its own.
+    if (engine.inDestination(frame, call)) return;
 
     const source = engine.sourceRule(site, frame);
     if (source) {
@@ -573,6 +593,30 @@ class Walker {
           this.body(frame, closure.closure, depth + 2, stack);
         }
       }
+      return;
+    }
+
+    // A push or a modal: the transition and the screen shown, not how the router does it.
+    const navigation = engine.navigation(site, frame, call);
+    if (navigation) {
+      const types = engine.shownBy(navigation, site, frame).map((shown) => shown.type.path);
+      const shown =
+        types.length > 0 ? types : navigation.destination.map((position) => engine.render(site.arguments[position]!.value, facts));
+      this.push({
+        depth,
+        kind: 'navigation',
+        text: `${navigation.transition} ${[...new Set(shown)].join(', ')}`,
+        layer,
+        at,
+        when,
+        notes: navigation.via ? [`via ${engine.symbolName(navigation.via)}`] : [],
+        warnings: [],
+      });
+      // Closures run on completion or dismissal are still followed.
+      site.arguments.forEach((argument, position) => {
+        if (argument.value.kind === 'closure' && !navigation.destination.includes(position))
+          this.body(frame, argument.value.closure, depth + 1, stack);
+      });
       return;
     }
 
@@ -948,6 +992,11 @@ function summarize(steps: FlowStep[], shownBy: Map<string, string[]>): FlowSumma
       continue;
     }
     if (dead) continue;
+    if (step.kind === 'navigation') {
+      summary.path.push(step.text);
+      number(step, step.text, 'navigation');
+      continue;
+    }
     if (step.kind === 'source' && step.notes.includes('write')) {
       const key = step.notes
         .filter((note) => note.startsWith('key '))
@@ -1015,6 +1064,10 @@ function dataSteps(summary: FlowSummary): DataStep[] {
     return entry;
   };
   for (const step of summary.steps) {
+    if (step.layer === 'navigation') {
+      add({ kind: 'navigation', text: step.text, notes: step.notes, at: step.at, success: [], failure: [] });
+      continue;
+    }
     const isSource = step.layer !== undefined && /^[a-z]/.test(step.layer) && !NOT_DATA.has(step.layer);
     if (isSource) {
       const text =

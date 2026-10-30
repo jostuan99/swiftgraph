@@ -1,9 +1,20 @@
 LoginView [SwiftUI View, layer View] @SampleArchitecture/LoginView.swift:7
 # di: LoginUseCase → LoginUseCaseImpl DIContainer.swift:17; LoginRepository → LoginRepositoryImpl DIContainer.swift:13
 # vm = LoginViewModel
-FLOWS (2)
+
+INPUT none
+ from SampleArchitectureApp: no arguments @SampleArchitectureApp.swift:11
+
+OUTPUT (2)
+ id | transition | to | trigger | when | parameters
+ O1 | push via BaseRoutingManager.push(_:animated:) | DetailView | #6 .onTapGesture | | :34
+ O2 | modal via BaseRoutingManager.sheet(_:animated:dismiss:) | DetailView | #7 .onTapGesture | | :39
+
+FLOWS (4)
  LoginView/F1 create LoginView init → vm = LoginViewModel() @LoginView.swift:8
- LoginView/F2 action LoginView#5 Button "Login" tap @:24
+ LoginView/F2 action LoginView#5 Button "ログイン" tap @:24
+ LoginView/F3 action LoginView .onTapGesture @:33
+ LoginView/F4 action LoginView .onTapGesture @:38
 
 LoginView/F1 create LoginView init → vm = LoginViewModel()
  1 [View] vm = LoginViewModel() @:8
@@ -15,44 +26,54 @@ LoginView/F1 create LoginView init → vm = LoginViewModel()
   writes: vm.anonymousViewModelMapper (init(viewModel: self)), vm.registerViewModelMapper (init(viewModel: self))
   shown: anonymousViewModelMapper → not shown on this screen; registerViewModelMapper → not shown on this screen
 
-LoginView/F2 action LoginView#5 Button "Login" tap
+LoginView/F2 action LoginView#5 Button "ログイン" tap
     [View] Button closure @LoginView.swift:24
   1 [ViewModel] vm.anonymousSession() @LoginViewModel+APIHandler.swift:6
   2 [UseCase] LoginUseCaseImpl.anonymous(_:) (Mapper = AnonymousViewModelMapper) @LoginUseCase.swift:22
   3 [Mapper] AnonymousEntityMapper.init() @AnonymousEntityMapper.swift:17
   4 [Repository] LoginRepositoryImpl.anonymousSession(_:) (Mapper = AnonymousEntityMapper) @LoginRepository.swift:14
-    [Repository] Just(()) → compactMap { jsonData.data(using: .utf8) } → tryMap { decoder.decode(Mapper.ResponseEntity.self, from: data) } → mapError { DomainError() } → eraseToAnyPublisher @:18
-    [Repository] jsonData.data(.utf8) @:19
-  5 [api] JSONDecoder.decode(AnonymousSession) (input: literal "{ session_id=\"fjaksdjfkajsdjfa\" }") ⚠ input is not valid JSON (LoginRepository.swift:17) @:23
+    [Repository] Just("{\"session_id\": \"fjaksdjfkajsdjfa\"}") → compactMap { data.data(using: .utf8) } → tryMap { decoder.decode(Mapper.ResponseEntity.self, from: data) } → map { mapper.mapping($0) } → mapError { DomainError() } → eraseToAnyPublisher @:17
+    [Repository] data.data(.utf8) @:18
+  5 [api] JSONDecoder.decode(AnonymousSession) (input: literal "{\"session_id\": \"fjaksdjfkajsdjfa\"}") @:22
+  6 [Mapper] AnonymousEntityMapper.mapping(_:) @AnonymousEntityMapper.swift:24
     [UseCase] sink async @LoginUseCase.swift:27
                           on completion: @:27
-  6 [Mapper] if case .failure(let error) = $0 → AnonymousViewModelMapper.error(_:) ⚠ empty @AnonymousViewModelMapper.swift:18
+  7 [Mapper] if case .failure(let error) = $0 → AnonymousViewModelMapper.error(_:) ⚠ empty @AnonymousViewModelMapper.swift:18
                           on value: @LoginUseCase.swift:27
-  7 [Mapper] if let domain = domain as? Mapper.EntityResult → AnonymousViewModelMapper.mapping(_:) ⚠ cast AnonymousSession → String always fails (LoginUseCase.swift:34) @AnonymousViewModelMapper.swift:12
-  8 [ViewModel] if !entity.isEmpty → vm.login() @LoginViewModel.swift:30
-  9 [UseCase] LoginUseCaseImpl.register(_:) (Mapper = RegisterViewModelMapper) @LoginUseCase.swift:43
- 10 [Mapper] RegisterViewModelMapper.getRequest() @AnonymousViewModelMapper.swift:31
- 11 [Mapper] if !(let request = mapper.getRequest() as? String) → RegisterViewModelMapper.error(_:) @:41
-    [Mapper] vm.error = error @:42
- 12 [Mapper] RegisterEntityMapper.init(_:) @RegisterEntityMapper.swift:17
- 13 [Mapper] RegisterEntityMapper.domainToRequest(_:) @:21
+  8 [Mapper] if let domain = domain as? Mapper.EntityResult → AnonymousViewModelMapper.mapping(_:) @AnonymousViewModelMapper.swift:12
+  9 [ViewModel] if !entity.isEmpty → vm.login() @LoginViewModel.swift:30
+ 10 [UseCase] LoginUseCaseImpl.register(_:) (Mapper = RegisterViewModelMapper) @LoginUseCase.swift:43
+ 11 [Mapper] RegisterViewModelMapper.getRequest() @RegisterViewModelMapper.swift:12
+ 12 [Mapper] if !(let request = mapper.getRequest() as? String) → RegisterViewModelMapper.error(_:) @:22
+    [Mapper] vm.error = error @:23
+ 13 [Mapper] RegisterEntityMapper.init(_:) @RegisterEntityMapper.swift:17
+ 14 [Mapper] RegisterEntityMapper.domainToRequest(_:) @:21
     [Mapper] RegisterEntityMapper.requestEntity = Self.domainToRequest(domain) @:18
- 14 [Repository] LoginRepositoryImpl.register(_:) (Mapper = RegisterEntityMapper) @LoginRepository.swift:29
-    [Repository] Just(()) → compactMap { jsonData.data(using: .utf8) } → tryMap { decoder.decode(Mapper.ResponseEntity.self, from: data) } → mapError { DomainError() } → eraseToAnyPublisher @:33
-    [Repository] jsonData.data(.utf8) @:34
- 15 [api] JSONDecoder.decode(AnonymousSession) (input: literal "{ session_id=\"fjaksdjfkajsdjfa\" }") ⚠ input is not valid JSON (LoginRepository.swift:32) @:38
+ 15 [Repository] LoginRepositoryImpl.register(_:) (Mapper = RegisterEntityMapper) @LoginRepository.swift:29
+    [Repository] Just("{\"session_id\": \"fjaksdjfkajsdjfa\"}") → compactMap { data.data(using: .utf8) } → tryMap { decoder.decode(Mapper.ResponseEntity.self, from: data) } → map { mapper.mapping($0) } → mapError { DomainError() } → eraseToAnyPublisher @:32
+    [Repository] data.data(.utf8) @:33
+ 16 [api] JSONDecoder.decode(AnonymousSession) (input: literal "{\"session_id\": \"fjaksdjfkajsdjfa\"}") @:37
+ 17 [Mapper] RegisterEntityMapper.mapping(_:) @RegisterEntityMapper.swift:25
     [UseCase] sink async @LoginUseCase.swift:51
                                     on completion: @:51
- 16 [Mapper] if case .failure(let error) = $0 → RegisterViewModelMapper.error(_:) @AnonymousViewModelMapper.swift:41
-    [Mapper] vm.error = error @:42
+ 18 [Mapper] if case .failure(let error) = $0 → RegisterViewModelMapper.error(_:) @RegisterViewModelMapper.swift:22
+    [Mapper] vm.error = error @:23
                                     on value: @LoginUseCase.swift:51
- 17 [Mapper] if let domain = domain as? Mapper.EntityResult → RegisterViewModelMapper.mapping(_:) ⚠ cast AnonymousSession → String always fails (LoginUseCase.swift:56) @AnonymousViewModelMapper.swift:35
-    [Mapper] if !entity.isEmpty → vm.state = .main @:37
- 18 [Mapper] if !(let domain = domain as? Mapper.EntityResult) → RegisterViewModelMapper.error(_:) ⚠ cast AnonymousSession → String always fails (LoginUseCase.swift:56) @:41
-    [Mapper] vm.error = error @:42
+ 19 [Mapper] if let domain = domain as? Mapper.EntityResult → RegisterViewModelMapper.mapping(_:) @RegisterViewModelMapper.swift:16
+    [Mapper] if !entity.isEmpty → vm.state = .main @:18
+ 20 [Mapper] if !(let domain = domain as? Mapper.EntityResult) → RegisterViewModelMapper.error(_:) @:22
+    [Mapper] vm.error = error @:23
     [UseCase] store(&disposeBag) @LoginUseCase.swift:62
- 19 [Mapper] if !(let domain = domain as? Mapper.EntityResult) → AnonymousViewModelMapper.error(_:) ⚠ empty ⚠ cast AnonymousSession → String always fails (LoginUseCase.swift:34) @AnonymousViewModelMapper.swift:18
+ 21 [Mapper] if !(let domain = domain as? Mapper.EntityResult) → AnonymousViewModelMapper.error(_:) ⚠ empty @AnonymousViewModelMapper.swift:18
     [UseCase] store(&disposeBag) @LoginUseCase.swift:40
   errors: on failure → AnonymousViewModelMapper.error(_:) ⚠ empty; on failure → RegisterViewModelMapper.error(_:); on failure → vm.error = error
   writes: vm.error (error), RegisterEntityMapper.requestEntity (Self.domainToRequest(domain)), vm.state (.main)
-  shown: error → not shown on this screen; requestEntity → not shown on this screen; state → LoginView#1–#6
+  shown: error → not shown on this screen; requestEntity → not shown on this screen; state → not shown on this screen
+
+LoginView/F3 action LoginView .onTapGesture
+   [View] onTapGesture closure @LoginView.swift:33
+ 1 [View] push DetailView (via BaseRoutingManager.push(_:animated:)) @:34
+
+LoginView/F4 action LoginView .onTapGesture
+   [View] onTapGesture closure @:38
+ 1 [View] modal DetailView (via BaseRoutingManager.sheet(_:animated:dismiss:)) @:39

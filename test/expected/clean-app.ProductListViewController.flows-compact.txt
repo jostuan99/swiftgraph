@@ -1,8 +1,19 @@
-ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:4
+ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:5
 # api = https://api.example.com
 # vm = ProductListViewModel
 
-F1 action #4 refreshButton tap → didTapRefresh() @ProductListViewController.swift:27
+INPUT (1)
+ param | type | how | default | into
+ viewModel | ProductListViewModel | init(viewModel:) | | viewModel :14
+
+OUTPUT (2)
+ id | transition | to | trigger | when | parameters
+ O1 | push | ProfileViewController | tableView(_:didSelectRowAt:) | indexPath.row == 0 | :69
+ O2 | modal | ProfileView | tableView(_:didSelectRowAt:) | !(indexPath.row == 0) | :71
+
+FLOWS (2)
+
+F1 action #4 refreshButton tap → didTapRefresh() @ProductListViewController.swift:28
 1 set vm.errorMessage ← nil (→ #3) @ProductListViewModel.swift:29
 2 read keychain "accessToken" @ProductService.swift:15
 3 GET /v1/products → ProductListResponse @:17

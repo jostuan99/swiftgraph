@@ -1,16 +1,17 @@
 ProfileView [SwiftUI View] @Sources/CleanApp/Presentation/Profile/ProfileView.swift:3
 # api = https://api.example.com
   state: @StateObject viewModel: ProfileViewModel = ProfileViewModel() @ProfileView.swift:4
+             title: String = "" @:5
   children: PointsBadge (subview); AvatarView (subview)
 
 ITEMS (8)
  id | line | kind | dir | when | datasource
- #1 | :15 | alert | display | viewModel.showsError | error GET /v1/me
- #2 | :16 | Button | action | | localization "common.ok"
+ #1 | :16 | alert | display | viewModel.showsError | error GET /v1/me
+ #2 | :17 | Button | action | | localized "OK"
  #3 | ProfileView+Header.swift:7 | Text | display | | GET /v1/me display_name
  #4 | ProfileView+Settings.swift:6 | Toggle | input | | userDefaults "notificationsEnabled"
- #5 | ProfileView+Settings.swift:7 | TextField | input | | ProfileViewModel.nickname; label localization "profile.nickname" (en "Nickname", missing ja); placeholder localization "profile.nickname.placeholder" (en "Enter a nickname", ja "ニックネームを入力")
- #6 | ProfileView+Settings.swift:8 | Button | action | | localization "profile.logout"
+ #5 | ProfileView+Settings.swift:7 | TextField | input | | ProfileViewModel.nickname; label localized "Nickname"; placeholder localized "Enter a nickname"
+ #6 | ProfileView+Settings.swift:8 | Button | action | | localized "Log out"
  PointsBadge#1 | PointsBadge.swift:7 | Label | display | | GET /v1/me points
  AvatarView#1 | AvatarView.swift:7 | AsyncImage | display | | GET /v1/me avatar_url
 
@@ -19,8 +20,8 @@ SUMMARY
  local none
  file none
  error GET /v1/me
- localization Localizable: 6 keys (2 missing in ja)
+ localized Localizable (default en): 6 keys (1 missing in ja)
  input notificationsEnabled: Bool, nickname: String (2 not read elsewhere)
- unresolved closure value (ProfileView.swift:15)
+ unresolved closure value (ProfileView.swift:16)
 
 More: --detail (DATA, CONDITIONS) or --item <id>

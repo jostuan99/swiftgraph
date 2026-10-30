@@ -2,6 +2,14 @@ ProductListView [SwiftUI View] @Sources/CleanApp/Presentation/ProductListView.sw
 # api = https://api.example.com
 # vm = ProductListViewModel
 
+INPUT none
+
+OUTPUT (1)
+ id | transition | to | trigger | when | parameters
+ O1 | push | ProfileView | #3 tap | | title: viewModel.title ← GET /v1/products title :16
+
+FLOWS (2)
+
 F1 create ProductListView init → viewModel = AppContainer.shared.makeProductListViewModel() @ProductListView.swift:4
 1 set vm.lastUpdated ← settings.lastUpdated @ProductListViewModel.swift:22
 2 read file "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")" @ProductCache.swift:7

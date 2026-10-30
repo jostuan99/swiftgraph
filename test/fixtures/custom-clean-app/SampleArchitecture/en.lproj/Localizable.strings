@@ -5,3 +5,9 @@
   Created by JosSteve on 26/10/26.
   
 */
+
+"loginFirstName" = "First Name";
+"loginLastName" = "Last Name";
+"loginPhoneNumber" = "Phone Number";
+"loginCustomerNumber" = "Customer Number";
+"loginButton" = "Login";

@@ -10,7 +10,7 @@
 import { analyze } from './analyze/analyze.ts';
 import { fork } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { discover, type DiscoverOptions, type Discovery } from './discover/discover.ts';
 import type { ModuleMap } from './discover/package-manifest.ts';
@@ -36,6 +36,11 @@ export interface BuildOptions extends Omit<DiscoverOptions, 'moduleMapCache'>, P
   key?: string | null;
   /** What is stored from localization files (values, languages). */
   localization?: LocalizationOptions;
+  /**
+   * Use the file selection and localization options of the previous build
+   * (`sync`) instead of the ones passed.
+   */
+  reuseOptions?: boolean;
   warn?: (message: string) => void;
 }
 
@@ -46,6 +51,9 @@ export interface BuildResult {
   extracted: number;
   unchanged: number;
   removed: number;
+  /** Files added or changed since the previous build, and files removed. */
+  changedPaths: string[];
+  removedPaths: string[];
   /** Swift files whose syntax tree contains ERROR or MISSING nodes. */
   withErrors: string[];
   skippedLarge: string[];
@@ -106,7 +114,28 @@ export async function build(root: string, options: BuildOptions = {}): Promise<B
   }
 }
 
-async function buildInto(db: Db, root: string, options: BuildOptions, started: number): Promise<BuildResult> {
+/** Options of a build that `sync` reuses. */
+type SavedOptions = Pick<BuildOptions, 'exclude' | 'gitTrackedOnly' | 'localization'>;
+
+/**
+ * Updates an existing database with the files changed since the last build,
+ * using the options of that build (excludes, git-tracked files, localization).
+ */
+export async function sync(root: string, options: Omit<BuildOptions, 'reuseOptions'> = {}): Promise<BuildResult> {
+  const path = options.database ?? databasePath(root);
+  if (!existsSync(path)) throw new Error(`no graph database at ${path}; run \`swiftgraph build\` first`);
+  return build(root, { ...options, reuseOptions: true });
+}
+
+async function buildInto(db: Db, root: string, given: BuildOptions, started: number): Promise<BuildResult> {
+  const savedOptions = getMeta(db, 'build_options');
+  const options: BuildOptions = given.reuseOptions && savedOptions ? { ...given, ...(JSON.parse(savedOptions) as SavedOptions) } : given;
+  const reused: SavedOptions = {
+    exclude: options.exclude ?? [],
+    gitTrackedOnly: options.gitTrackedOnly === true,
+    localization: options.localization ?? { noValues: false, languages: [] },
+  };
+  setMeta(db, 'build_options', JSON.stringify(reused));
   const cachedModuleMap = getMeta(db, 'module_map');
   // `--module` values are kept, so later builds (git hooks) map files the same way.
   const savedModules = getMeta(db, 'module_overrides');
@@ -160,7 +189,12 @@ async function buildInto(db: Db, root: string, options: BuildOptions, started: n
 
   const discovered = new Set(discovery.files.map((file) => file.path));
   const removedPaths = [...stored.keys()].filter((path) => !discovered.has(path));
-  const modulesChanged = pending.some((file) => stored.has(file.path) && stored.get(file.path)?.module !== file.module);
+  const previousMap = cachedModuleMap ? (JSON.parse(cachedModuleMap) as { map: ModuleMap }).map : undefined;
+  const modulesChanged =
+    pending.some((file) => stored.has(file.path) && stored.get(file.path)?.module !== file.module) ||
+    // A new default language changes the source language of the strings tables.
+    (previousMap !== undefined &&
+      JSON.stringify(previousMap.defaultLanguages ?? {}) !== JSON.stringify(discovery.moduleMap.defaultLanguages ?? {}));
   // Set by storeFiles and cleared once the graph matches the stored facts: still
   // set here means a previous build stored new facts but did not finish.
   const interrupted = getMeta(db, 'graph_pending') === '1';
@@ -224,6 +258,8 @@ async function buildInto(db: Db, root: string, options: BuildOptions, started: n
     extracted: pending.filter((file) => file.changed && file.kind === 'swift').length,
     unchanged: pending.filter((file) => !file.changed).length,
     removed: removedPaths.length,
+    changedPaths: pending.filter((file) => file.changed).map((file) => file.path),
+    removedPaths,
     withErrors,
     skippedLarge: discovery.skippedLarge,
     nodes: count('SELECT COUNT(*) AS count FROM nodes'),
@@ -444,7 +480,14 @@ export function loadLocalizationFiles(db: Db): LocalizationFile[] {
        WHERE f.kind != 'swift' ORDER BY f.path`,
     )
     .all() as { path: string; module: string; facts: Uint8Array }[];
-  return rows.map((row) => ({ path: row.path, module: row.module, facts: decodeFacts<LocalizationFacts>(row.facts) }));
+  const saved = getMeta(db, 'module_map');
+  const defaults = saved ? ((JSON.parse(saved) as { map: ModuleMap }).map.defaultLanguages ?? {}) : {};
+  return rows.map((row) => ({
+    path: row.path,
+    module: row.module,
+    facts: decodeFacts<LocalizationFacts>(row.facts),
+    ...(defaults[row.module] ? { defaultLanguage: defaults[row.module] } : {}),
+  }));
 }
 
 /** Reads the stored facts of a Swift file. */

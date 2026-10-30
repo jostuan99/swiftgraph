@@ -1,5 +1,7 @@
 "refresh" = "更新";
 "profile.logout" = "ログアウト";
+"profile.nickname" = "プロフィール";
 "profile.nickname.placeholder" = "ニックネームを入力";
 "profile.error.title" = "プロフィールを読み込めませんでした";
 "common.ok" = "OK";
+"profile.open" = "プロフィール";

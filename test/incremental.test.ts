@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { build } from '../src/build.ts';
+import { build, sync } from '../src/build.ts';
 import { openDatabase } from '../src/store/db.ts';
 import { fixtureCopy } from './helpers.ts';
 
@@ -150,6 +150,28 @@ test('touching a file without changing it does not rebuild', async () => {
     const result = await build(root, { workers: 2 });
     assert.equal(result.extracted, 0);
     assert.equal(result.graphUpdate, 'none');
+  } finally {
+    cleanup();
+  }
+});
+
+test('sync updates the changed files with the options of the last build', async () => {
+  const { root, cleanup } = fixtureCopy();
+  try {
+    await assert.rejects(sync(root, { workers: 1 }), /no graph database/);
+    await build(root, { workers: 1, exclude: ['Sources/App/**'], localization: { noValues: true, languages: [] } });
+    const store = join(root, 'Sources', 'Core', 'Store.swift');
+    writeFileSync(store, `${readFileSync(store, 'utf8')}\n// edited\n`);
+    const result = await sync(root, { workers: 1 });
+    assert.deepEqual(result.changedPaths, ['Sources/Core/Store.swift']);
+    // The excluded directory stays out and localization files are not read again.
+    const db = openDatabase(join(root, '.swiftgraph', 'graph.db'), { readonly: true });
+    try {
+      const paths = (db.prepare('SELECT path FROM files').pluck().all() as string[]).filter((path) => path.startsWith('Sources/App/'));
+      assert.deepEqual(paths, []);
+    } finally {
+      db.close();
+    }
   } finally {
     cleanup();
   }

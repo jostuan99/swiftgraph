@@ -20,7 +20,7 @@ import {
 } from '../resolve/resolve.ts';
 import { loadRules, alignArguments, argumentIndex, asList, globMatches, parseCallPattern, type CallPattern } from '../rules/load.ts';
 import type { FlowThroughRule, Loaded, RuleSet, SourceRule, TypeMatch } from '../rules/types.ts';
-import type { CallSite, Declaration, FileFacts, Parameter, ValueExpr } from '../schema/types.ts';
+import type { CallSite, Declaration, FileFacts, Parameter, PathRoot, ValueExpr } from '../schema/types.ts';
 import { GraphAccess } from './graph-access.ts';
 import { parseTypeText, type TypeText } from './type-text.ts';
 
@@ -75,6 +75,18 @@ export interface CallTarget {
   confidence: 'EXTRACTED' | 'INFERRED' | 'AMBIGUOUS';
 }
 
+/** A call that shows another screen (see `FlowEngine.navigation`). */
+export interface Navigation {
+  /** Positions of the arguments holding the destination. */
+  destination: number[];
+  /** `push`, `modal`, or a project transition (`replace`, `tab`). */
+  transition: string;
+  /** Screen named by the rule (`to`): a coordinator method that shows a fixed screen. */
+  to?: string;
+  /** The repository method that wraps the navigation call (a router's `push`). */
+  via?: DeclarationInfo;
+}
+
 export interface Injection {
   service: TypeInfo;
   implementation: TypeInfo;
@@ -101,6 +113,8 @@ export type Origin =
       kind: 'localization';
       table: string;
       key: string;
+      /** Development language of the table: shown when the user's language has no translation. */
+      defaultLanguage?: string;
       missing: string[];
       values: { language: string; value: string | null }[];
       at: Location;
@@ -195,6 +209,7 @@ export class FlowEngine {
   private readonly callMemo = new WeakMap<Frame, Map<number, CallTarget[]>>();
   private readonly frameMemo = new WeakMap<DeclarationInfo, Frame>();
   private readonly languageMemo = new Map<string, string[]>();
+  private readonly wrapperMemo = new Map<string, { parameters: number[]; transition: string; to?: string } | undefined>();
   depthLimit = DEFAULT_DEPTH;
 
   constructor(db: Db, root: string, rules?: RuleSet) {
@@ -613,20 +628,27 @@ export class FlowEngine {
       return undefined;
     }
     const type = this.typeOf(site.receiver, frame);
-    if (!type) {
-      // Receiver of unknown type: accept a type name written as the receiver, or the member name alone.
-      return aligned;
-    }
-    if (type.text === pattern.type || baseTypeName(type.text) === pattern.type) return aligned;
-    if (type.info) {
-      if (type.info.name === pattern.type) return aligned;
-      const names = [...this.index.externalNames(type.info), ...this.index.protocolsOf(type.info).map((protocol) => protocol.name)];
-      for (let current = type.info.superclass; current; current = current.superclass) names.push(current.name);
-      if (names.includes(pattern.type)) return aligned;
-      return undefined;
-    }
-    // An SDK type we know nothing about: trust the member name.
-    return aligned;
+    // Receiver of unknown type: accept a type name written as the receiver, or the member name alone.
+    if (!type) return aligned;
+    return this.typeFits(type, pattern.type) ? aligned : undefined;
+  }
+
+  /**
+   * Whether a type is `name`, a subclass of it or conforms to it. An SDK type
+   * we know nothing about fits (the member name is trusted), unless `strict`.
+   */
+  typeFits(type: Ty, name: string, strict = false): boolean {
+    if (name === '*' || type.text === name || baseTypeName(type.text) === name) return true;
+    if (!type.info) return !strict;
+    if (type.info.name === name) return true;
+    const names = [...this.index.externalNames(type.info), ...this.index.protocolsOf(type.info).map((protocol) => protocol.name)];
+    for (let current = type.info.superclass; current; current = current.superclass) names.push(current.name);
+    return names.includes(name);
+  }
+
+  /** `sources` rules on a member read (`Localization.localized`), by member name. */
+  memberSources(member: string): Loaded<SourceRule>[] {
+    return this.rules.sources.filter((rule) => rule.member !== undefined && parseCallPattern(rule.member).name === member);
   }
 
   sourceRule(site: CallSite, frame: Frame): { rule: Loaded<SourceRule>; aligned: string[] } | undefined {
@@ -655,6 +677,179 @@ export class FlowEngine {
   /** A member read that a rule turns into an element access: `items.first`. */
   memberRule(member: string): Loaded<FlowThroughRule> | undefined {
     return this.rules.flowThrough.find((rule) => rule.member !== undefined && parseCallPattern(rule.member).name === member);
+  }
+
+  // --- Navigation ------------------------------------------------------------------
+
+  /**
+   * A call that shows another screen: by a `navigation` rule, or a method of the
+   * repository that passes a view parameter to such a call (a router's
+   * `push(_ view: some View)` around `pushViewController`). Its body is not
+   * followed: only the transition and the destination count.
+   */
+  navigation(site: CallSite, frame: Frame, call?: number): Navigation | undefined {
+    for (const rule of this.rules.navigation) {
+      const aligned = this.matchCall(parseCallPattern(rule.call), site, frame);
+      if (!aligned) continue;
+      const refs = rule.destination.map(String);
+      const destination = site.arguments.flatMap((_, position) =>
+        refs.includes(aligned[position] ?? '') || refs.includes(String(position)) ? [position] : [],
+      );
+      return { destination, transition: rule.transition ?? 'push', ...(rule.to ? { to: rule.to } : {}) };
+    }
+    if (call === undefined) return undefined;
+    for (const target of this.callTargets(call, frame)) {
+      const wrapper = this.navigationWrapper(target.target);
+      if (!wrapper) continue;
+      const mapping = mapArguments(target.target.declaration.parameters ?? [], site);
+      const destination = wrapper.parameters.flatMap((parameter) => {
+        const argument = mapping.get(parameter);
+        return argument === undefined ? [] : [argument];
+      });
+      return { destination, transition: wrapper.transition, ...(wrapper.to ? { to: wrapper.to } : {}), via: target.target };
+    }
+    return undefined;
+  }
+
+  /** Whether a call is inside the destination argument or closure of a navigation call. */
+  inDestination(frame: Frame, call: number): boolean {
+    return this.enclosingNavigation(frame, call) !== undefined;
+  }
+
+  /** The navigation call whose destination argument or closure holds a call. */
+  enclosingNavigation(frame: Frame, call: number): (Navigation & { call: number }) | undefined {
+    const facts = frame.file.facts;
+    const seen = new Set<number>();
+    for (let current = call; !seen.has(current);) {
+      seen.add(current);
+      const site = facts.flow.calls[current];
+      if (!site) return undefined;
+      let outer: number | null = null;
+      let holds: (value: ValueExpr) => boolean;
+      if (site.parent !== null) {
+        outer = site.parent;
+        const inner = current;
+        holds = (value) => value.kind === 'call' && value.call === inner;
+      } else if (site.closure !== null) {
+        outer = facts.flow.closures[site.closure]?.call ?? null;
+        const closure = site.closure;
+        holds = (value) => value.kind === 'closure' && value.closure === closure;
+      } else return undefined;
+      if (outer === null) return undefined;
+      const outerSite = facts.flow.calls[outer]!;
+      const position = outerSite.arguments.findIndex((argument) => holds(argument.value));
+      const navigation = position >= 0 ? this.navigation(outerSite, frame, outer) : undefined;
+      if (navigation?.destination.includes(position)) return { ...navigation, call: outer };
+      current = outer;
+    }
+    return undefined;
+  }
+
+  /**
+   * Screens a navigation call shows: what its destination arguments create,
+   * and the screen its rule names (`to`), which gets the call's own arguments.
+   */
+  shownBy(navigation: Navigation, site: CallSite, frame: Frame): { type: TypeInfo; call?: number; fixed?: true }[] {
+    const shown: { type: TypeInfo; call?: number; fixed?: true }[] = navigation.destination.flatMap((position) => {
+      const value = site.arguments[position]?.value;
+      return value ? this.destinations(value, frame) : [];
+    });
+    const fixed = navigation.to ? this.resolveType(navigation.to, frame).info : undefined;
+    if (fixed) shown.push({ type: fixed, fixed: true });
+    return shown;
+  }
+
+  /**
+   * Screens a destination argument shows, with the call that creates each:
+   * `DetailView(item: row)`, the view inside `UIHostingController(rootView: …)`,
+   * a variable bound to such a call, or the type of a value.
+   */
+  destinations(value: ValueExpr, frame: Frame, seen: Set<object> = new Set()): { type: TypeInfo; call?: number }[] {
+    const facts = frame.file.facts;
+    if (value.kind === 'closure') {
+      const closure = value.closure;
+      return facts.flow.calls.flatMap((site, call) =>
+        site.closure === closure && site.parent === null ? this.destinations({ kind: 'call', call }, frame, seen) : [],
+      );
+    }
+    if (value.kind === 'call') {
+      const site = facts.flow.calls[value.call]!;
+      if (!site.receiver && isTypeName(site.name)) {
+        const info = this.resolveType(site.name, frame).info;
+        // A container (hosting or navigation controller) stands for the screen it holds.
+        const names = info ? this.index.externalNames(info) : [];
+        const container = !info || names.includes('UIHostingController') || names.includes('UINavigationController');
+        if (info && !container) return [{ type: info, call: value.call }];
+        const inner = site.arguments.flatMap((argument) =>
+          argument.value.kind === 'closure' ? [] : this.destinations(argument.value, frame, seen),
+        );
+        if (inner.length > 0) return inner;
+        return info ? [{ type: info, call: value.call }] : [];
+      }
+    }
+    if (value.kind === 'path' && value.root.kind === 'local' && value.members.length === 0) {
+      const binding = this.findBinding(value.root.name, value.root.scope, frame, seen);
+      if (binding) {
+        seen.add(binding);
+        const bound = this.destinations(binding.value, frame, seen);
+        if (bound.length > 0) return bound;
+      }
+    }
+    const types: { type: TypeInfo }[] = [];
+    const visit = (type: Ty | undefined): void => {
+      if (!type) return;
+      if (type.info) types.push({ type: type.info });
+      type.args.forEach(visit);
+    };
+    visit(this.typeOf(value, frame));
+    return types;
+  }
+
+  /** Parameters of a method that it passes as the destination of a navigation call. */
+  private navigationWrapper(info: DeclarationInfo): { parameters: number[]; transition: string; to?: string } | undefined {
+    if (this.wrapperMemo.has(info.id)) return this.wrapperMemo.get(info.id);
+    this.wrapperMemo.set(info.id, undefined);
+    const declaration = info.declaration;
+    const frame = this.frameOf(info);
+    // Only view parameters: `_ view: some View`, `<V: View>(_ view: V)`, a view controller.
+    const screens = (declaration.parameters ?? []).flatMap((parameter, position) =>
+      /\bView\b|ViewController\b/.test(parameter.type) || declaration.genericConstraints?.[parameter.type]?.includes('View')
+        ? [{ name: parameter.name, position }]
+        : [],
+    );
+    let found: { parameters: number[]; transition: string; to?: string } | undefined;
+    if (frame && screens.length > 0) {
+      for (const [call, site] of frame.file.facts.flow.calls.entries()) {
+        if (site.from !== declaration.localId) continue;
+        const navigation = this.navigation(site, frame, call);
+        if (!navigation) continue;
+        const names = new Set<string>();
+        for (const position of navigation.destination) this.localsIn(site.arguments[position]!.value, frame, names, new Set());
+        const parameters = screens.filter((screen) => names.has(screen.name)).map((screen) => screen.position);
+        if (parameters.length > 0) {
+          found = { parameters, transition: navigation.transition, ...(navigation.to ? { to: navigation.to } : {}) };
+          break;
+        }
+      }
+    }
+    this.wrapperMemo.set(info.id, found);
+    return found;
+  }
+
+  /** Names a value is built from, through local bindings and call arguments. */
+  private localsIn(value: ValueExpr, frame: Frame, names: Set<string>, seen: Set<object>): void {
+    if (value.kind === 'path' && value.root.kind === 'local' && value.members.length === 0) {
+      names.add(value.root.name);
+      const binding = this.findBinding(value.root.name, value.root.scope, frame, seen);
+      if (binding) {
+        seen.add(binding);
+        this.localsIn(binding.value, frame, names, seen);
+      }
+    } else if (value.kind === 'call') {
+      for (const argument of frame.file.facts.flow.calls[value.call]!.arguments) this.localsIn(argument.value, frame, names, seen);
+    } else if (value.kind === 'compound') {
+      for (const operand of value.operands) this.localsIn(operand, frame, names, seen);
+    }
   }
 
   private sourceType(rule: SourceRule, aligned: string[], site: CallSite, frame: Frame): Ty | undefined {
@@ -901,26 +1096,51 @@ export class FlowEngine {
     return languages;
   }
 
+  /** Default language a `localization` rule sets for a module's table. */
+  defaultLanguage(module: string, table: string): string | undefined {
+    return this.rules.localization.find(
+      (rule) =>
+        (rule.module === undefined || asList(rule.module).some((glob) => globMatches(glob, module))) &&
+        (rule.table === undefined || asList(rule.table).some((glob) => globMatches(glob, table))),
+    )?.defaultLanguage;
+  }
+
+  /** Strings tables of the repository: module, name, and the default language found in the project. */
+  localizationTables(): { module: string; table: string; defaultLanguage: string | null }[] {
+    return [...this.index.graph.localization.tables.values()].map((table) => ({
+      module: table.module,
+      table: table.name,
+      defaultLanguage: table.sourceLanguage,
+    }));
+  }
+
   /** A localized string by key, with its translations and the languages that miss it. Undefined when the module has no tables. */
   localizationOrigin(key: string, module: string, at: Location, tableName?: string): Traced | undefined {
     const payload = this.index.graph.localization;
     const tables = [...payload.tables.values()].filter((table) => table.module === module);
     if (tables.length === 0) return undefined;
     const table = tables.find((candidate) => candidate.name === (tableName ?? 'Localizable')) ?? tables[0]!;
+    const defaultLanguage = this.defaultLanguage(module, table.name) ?? table.sourceLanguage ?? undefined;
     const record = table.strings.get(key);
     const translated = new Map<string, string | null>();
     for (const translation of record?.translations ?? []) {
       if (translation.variationPath === '' || !translated.has(translation.language))
         translated.set(translation.language, translation.value);
     }
-    const missing = this.languages(module).filter((language) => !translated.has(language));
+    const languages = new Set(this.languages(module));
+    if (defaultLanguage) languages.add(defaultLanguage);
+    const missing = [...languages].sort().filter((language) => !translated.has(language));
     return {
       origin: {
         kind: 'localization',
         table: table.name,
         key,
+        ...(defaultLanguage ? { defaultLanguage } : {}),
         missing,
-        values: [...translated.entries()].map(([language, value]) => ({ language, value })),
+        // The default language first.
+        values: [...translated.entries()]
+          .map(([language, value]) => ({ language, value }))
+          .sort((a, b) => Number(b.language === defaultLanguage) - Number(a.language === defaultLanguage)),
         at,
       },
       fields: [],
@@ -1116,6 +1336,8 @@ class Tracer {
       case 'path': {
         const path = projected([...expr.members, ...members]);
         const root = expr.root;
+        const keyed = this.keyedMember(root, path, frame, depth, line);
+        if (keyed) return keyed;
         if (root.kind === 'self') return this.selfMembers(frame, path, depth, line);
         if (root.kind === 'type') return this.typeMembers(root.name, frame, path, depth, line);
         if (root.kind === 'call') return this.call(root.call, frame, path, depth);
@@ -1145,6 +1367,16 @@ class Tracer {
       };
       if (caught) origin.type = caught;
       return [this.finish({ origin, fields: [], steps: [], warnings: [] }, members, frame, engine.typeOf(expr, frame))];
+    }
+    // A member read on a string literal: `"login.title".localized`.
+    const literalMember = /^"(?:[^"\\]|\\.)*"\.(\w+)((?:\.\w+)*)$/.exec(expr.text);
+    const literal = expr.operands[0];
+    if (literalMember && literal?.kind === 'literal') {
+      for (const rule of engine.memberSources(literalMember[1]!)) {
+        const keyed = this.keyedSource(rule, literal, expr.text, frame, depth, line);
+        const rest = [...literalMember[2]!.split('.').filter(Boolean), ...members];
+        if (keyed.length > 0) return keyed.map((traced) => this.applyMembers(traced, rest, frame));
+      }
     }
     const cast = castOf(expr);
     if (cast && expr.operands[0]) {
@@ -1641,6 +1873,82 @@ class Tracer {
     return [{ ...this.unresolved(`${field} of ${text}`, frame, site.line), fields: members }];
   }
 
+  /**
+   * A member read that a `sources` rule names (`Localization.loginFirstName.localized`):
+   * the source, with the key taken from the value the member is read on.
+   */
+  private keyedMember(root: PathRoot, path: string[], frame: Frame, depth: number, line: number): Traced[] | undefined {
+    // The last such member wins: `a.localized.uppercased()` reads `localized` on `a`.
+    for (let index = path.length - 1; index >= 0; index--) {
+      const rules = this.engine.memberSources(path[index]!);
+      if (rules.length === 0) continue;
+      // A member of the type itself (`L10n.title`) is not read on a value.
+      if (root.kind === 'type' && index === 0) continue;
+      const receiver: ValueExpr = { kind: 'path', root, members: path.slice(0, index) };
+      const text = `${this.engine.render(receiver, frame.file.facts)}.${path[index]}`;
+      for (const rule of rules) {
+        const keyed = this.keyedSource(rule, receiver, text, frame, depth, line);
+        if (keyed.length > 0) return keyed.map((traced) => this.applyMembers(traced, path.slice(index + 1), frame));
+      }
+    }
+    return undefined;
+  }
+
+  /** The source a rule with `keyFrom` reads, one per value the receiver may hold; empty when the receiver's type does not fit. */
+  private keyedSource(rule: Loaded<SourceRule>, receiver: ValueExpr, text: string, frame: Frame, depth: number, line: number): Traced[] {
+    const engine = this.engine;
+    const pattern = parseCallPattern((rule.member ?? rule.call)!);
+    const at = engine.location(frame, line);
+    // Values of another type (the condition of `flag ? .a : .b`) give no key.
+    const values = this.trace(receiver, frame, [], depth + 1, line).filter(
+      (value) => value.type && engine.typeFits(value.type, pattern.type ?? '*', true),
+    );
+    if (values.length === 0) return [];
+    const keys: (string | undefined)[] = [];
+    // `undefined`: a value whose key is not known.
+    const spec = rule.keyFrom!;
+    if (spec === 'rawValue' || spec === 'case' || spec === 'self') {
+      for (const value of values) keys.push(this.keyOf(value, spec));
+    } else {
+      // A property of the value: `LocalizedKey(key: "login.title")`.
+      for (const value of this.trace(receiver, frame, [spec], depth + 1, line))
+        keys.push(value.origin.kind === 'literal' ? value.origin.value : undefined);
+    }
+    const results: Traced[] = [];
+    const known = keys.filter((key) => key !== undefined);
+    for (const key of new Set(known.length > 0 && known.length === keys.length ? known : keys)) {
+      const localized =
+        key !== undefined && rule.kind === 'localization' ? engine.localizationOrigin(key, frame.file.module, at, rule.table) : undefined;
+      if (localized) {
+        results.push(localized);
+        continue;
+      }
+      const origin: Extract<Origin, { kind: 'source' }> = {
+        kind: 'source',
+        source: rule.kind,
+        rule: rule.id ?? rule.origin,
+        call: text,
+        api: apiName(rule.member ?? rule.call!),
+        at,
+      };
+      origin.key = key ?? `${this.engine.render(receiver, frame.file.facts)}.${spec}`;
+      const type = rule.type && typeof rule.type === 'object' ? engine.resolveType(rule.type.fixed, frame) : { text: 'String', args: [] };
+      results.push({ origin, fields: [], steps: [], warnings: [], type });
+    }
+    return results;
+  }
+
+  /** The key a value gives: an enum case's raw value or name, or a string literal. */
+  private keyOf(value: Traced, spec: 'rawValue' | 'case' | 'self'): string | undefined {
+    const origin = value.origin;
+    if (origin.kind === 'literal') return spec === 'case' ? undefined : origin.value;
+    if (origin.kind !== 'case' || spec === 'self') return undefined;
+    if (spec === 'case') return origin.name;
+    const owner = unwrap(value.type)?.info;
+    const declaration = owner?.members.get(origin.name)?.find((member) => member.declaration.kind === 'enum_case')?.declaration;
+    return declaration?.signature.match(/=\s*"([^"]*)"/)?.[1] ?? origin.name;
+  }
+
   private sourceOrigin(
     rule: Loaded<SourceRule>,
     aligned: string[],
@@ -1660,8 +1968,13 @@ class Tracer {
     const keyValue = argumentValue(rule.key);
     const inputValue = argumentValue(rule.input);
     if (rule.kind === 'localization' && keyValue?.kind === 'literal') {
-      const localized = engine.localizationOrigin(keyValue.value, frame.file.module, engine.location(frame, site.line));
+      const localized = engine.localizationOrigin(keyValue.value, frame.file.module, engine.location(frame, site.line), rule.table);
       if (localized) return [this.applyMembers(localized, rest, frame)];
+    }
+    // The key is on the receiver: `Localization.loginFirstName.localized()`.
+    if (rule.keyFrom && site.receiver) {
+      const keyed = this.keyedSource(rule, site.receiver, engine.render({ kind: 'call', call }, frame.file.facts), frame, depth, site.line);
+      if (keyed.length > 0) return keyed.map((traced) => this.applyMembers(traced, rest, frame));
     }
     const origin: Extract<Origin, { kind: 'source' }> = {
       kind: 'source',

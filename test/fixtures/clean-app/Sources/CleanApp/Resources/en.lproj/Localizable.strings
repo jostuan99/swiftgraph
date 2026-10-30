@@ -6,3 +6,4 @@
 "profile.nickname.placeholder" = "Enter a nickname";
 "profile.error.title" = "Could not load your profile";
 "common.ok" = "OK";
+"profile.open" = "Profile";

@@ -1,13 +1,37 @@
-// Loads the presets and the project's swiftgraph.json into one rule set.
+// Loads the presets and the project's swiftgraph.yaml (or .yml, .json) into one rule set.
 // See docs/05-data-flow.md, section 5.1.
 
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import { fileURLToPath } from 'node:url';
 import { RULE_KINDS, type ArgumentRef, type RuleFile, type RuleKind, type RuleSet } from './types.ts';
 
 export const CONFIG_FILE = 'swiftgraph.json';
+
+/** Project rule files, in YAML or JSON; a project has at most one. */
+export const CONFIG_FILES = ['swiftgraph.yaml', 'swiftgraph.yml', CONFIG_FILE] as const;
+
+/** The project's rule file, if any. Throws `RuleError` when there are several. */
+export function configPath(root: string): string | undefined {
+  const found = CONFIG_FILES.filter((name) => existsSync(join(root, name)));
+  if (found.length > 1) throw new RuleError(`${found.join(' and ')}: keep one rule file`);
+  return found[0] === undefined ? undefined : join(root, found[0]);
+}
+
+/** Reads a rule file: YAML, or JSON (which YAML also reads). */
+export function readRuleFile(path: string): RuleFile {
+  const name = basename(path);
+  let file: RuleFile;
+  try {
+    file = (parseYaml(readFileSync(path, 'utf8')) ?? {}) as RuleFile;
+  } catch (error) {
+    throw new RuleError(`${name}: ${(error as Error).message}`);
+  }
+  validate(file, name);
+  return file;
+}
 
 const PRESET_DIRECTORY = fileURLToPath(new URL('./presets/', import.meta.url));
 
@@ -42,33 +66,24 @@ export function defaultPresets(imports: ReadonlySet<string>): string[] {
 }
 
 /**
- * Reads `<root>/swiftgraph.json` (optional) and merges it over its presets.
- * `imports` are the modules the project imports, for the default presets.
+ * Reads the project's rule file (optional, see `configPath`) and merges it
+ * over its presets. `imports` are the modules the project imports, for the default presets.
  */
 export function loadRules(root: string, imports: ReadonlySet<string>): RuleSet {
-  const path = join(root, CONFIG_FILE);
-  let project: RuleFile = {};
-  if (existsSync(path)) {
-    try {
-      project = JSON.parse(readFileSync(path, 'utf8')) as RuleFile;
-    } catch (error) {
-      throw new RuleError(`${CONFIG_FILE}: ${(error as Error).message}`);
-    }
-    validate(project, CONFIG_FILE);
-  }
-  return mergeRules(project, imports);
+  const path = configPath(root);
+  return mergeRules(path ? readRuleFile(path) : {}, imports, path ? basename(path) : CONFIG_FILE);
 }
 
-export function mergeRules(project: RuleFile, imports: ReadonlySet<string>): RuleSet {
+export function mergeRules(project: RuleFile, imports: ReadonlySet<string>, origin: string = CONFIG_FILE): RuleSet {
   const available = presets();
   const names = project.extends ?? defaultPresets(imports);
   const layers: { origin: string; file: RuleFile }[] = [];
   for (const name of names) {
     const preset = available.get(name);
-    if (!preset) throw new RuleError(`${CONFIG_FILE}: unknown preset "${name}" (available: ${[...available.keys()].join(', ')})`);
+    if (!preset) throw new RuleError(`${origin}: unknown preset "${name}" (available: ${[...available.keys()].join(', ')})`);
     layers.push({ origin: name, file: preset });
   }
-  layers.push({ origin: CONFIG_FILE, file: project });
+  layers.push({ origin, file: project });
 
   const disabled = new Set(layers.flatMap((layer) => layer.file.disable ?? []));
   const result = { presets: names, hash: '' } as RuleSet;
@@ -97,6 +112,19 @@ export function mergeRules(project: RuleFile, imports: ReadonlySet<string>): Rul
   return result;
 }
 
+/**
+ * The effective rules of `kinds` as a rule file: presets in `extends`,
+ * then each rule with its `id`. Copied into the project and edited, a rule
+ * replaces the preset rule with the same `id`.
+ */
+export function ruleTemplate(rules: RuleSet, kinds: readonly RuleKind[]): RuleFile {
+  const template: RuleFile = { extends: rules.presets };
+  for (const kind of kinds) {
+    (template as Record<string, unknown>)[kind] = (rules[kind] as { origin: string }[]).map(({ origin: _origin, ...rule }) => rule);
+  }
+  return template;
+}
+
 function validate(file: RuleFile, name: string): void {
   if (typeof file !== 'object' || file === null || Array.isArray(file)) throw new RuleError(`${name}: expected an object`);
   const known = new Set<string>(['$schema', 'extends', 'disable', ...RULE_KINDS]);
@@ -112,12 +140,30 @@ function validate(file: RuleFile, name: string): void {
       throw new RuleError(`${name}: a layer rule needs "layer" and "match"`);
   }
   for (const rule of file.sources ?? []) {
-    if (typeof rule.kind !== 'string' || (rule.call === undefined && rule.attribute === undefined)) {
-      throw new RuleError(`${name}: a source rule needs "kind" and "call" or "attribute"`);
+    if (typeof rule.kind !== 'string' || (rule.call === undefined && rule.attribute === undefined && rule.member === undefined)) {
+      throw new RuleError(`${name}: a source rule needs "kind" and "call", "member" or "attribute"`);
     }
+    if (rule.member !== undefined && rule.keyFrom === undefined)
+      throw new RuleError(`${name}: a source rule with "member" needs "keyFrom" (rawValue, case, self or a property)`);
   }
   for (const rule of file.sinks ?? []) {
     if ((rule.call === undefined) === (rule.property === undefined)) throw new RuleError(`${name}: a sink rule needs "call" or "property"`);
+  }
+  for (const rule of file.navigation ?? []) {
+    if (typeof rule.call !== 'string' || !Array.isArray(rule.destination))
+      throw new RuleError(`${name}: a navigation rule needs "call" and "destination"`);
+    if (rule.transition !== undefined && (typeof rule.transition !== 'string' || rule.transition === ''))
+      throw new RuleError(`${name}: "transition" of a navigation rule is a name: "push", "modal", ...`);
+    if (rule.to !== undefined && typeof rule.to !== 'string') throw new RuleError(`${name}: "to" of a navigation rule is a type name`);
+  }
+  for (const rule of file.inputs ?? []) {
+    const selectors = [rule.initializer, rule.method, rule.attribute, rule.memberwise].filter((value) => value !== undefined);
+    if (typeof rule.kind !== 'string' || selectors.length !== 1)
+      throw new RuleError(`${name}: an input rule needs "kind" and one of "initializer", "method", "attribute", "memberwise"`);
+  }
+  for (const rule of file.localization ?? []) {
+    if (typeof rule.defaultLanguage !== 'string' || rule.defaultLanguage === '')
+      throw new RuleError(`${name}: a localization rule needs "defaultLanguage" ("en", "ja", ...)`);
   }
   for (const rule of file.injection ?? []) {
     if (typeof rule.register !== 'string') throw new RuleError(`${name}: an injection rule needs "register"`);

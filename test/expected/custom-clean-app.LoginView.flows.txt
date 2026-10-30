@@ -1,11 +1,26 @@
 LoginView [SwiftUI View] @SampleArchitecture/LoginView.swift:7
+# vm = LoginViewModel
 
-F2 action #5 Button "Login" tap @LoginView.swift:24
-1 JSONDecoder.decode(AnonymousSession) (input: literal "{ session_id=\"fjaksdjfkajsdjfa\" }") @LoginRepository.swift:23
+INPUT none
+ from SampleArchitectureApp: no arguments @SampleArchitectureApp.swift:11
+
+OUTPUT (2)
+ id | transition | to | trigger | when | parameters
+ O1 | push via BaseRoutingManager.push(_:animated:) | DetailView | #6 .onTapGesture | | :34
+ O2 | modal via BaseRoutingManager.sheet(_:animated:dismiss:) | DetailView | #7 .onTapGesture | | :39
+
+FLOWS (2)
+
+F2 action #5 Button "ログイン" tap @LoginView.swift:24
+1 JSONDecoder.decode(AnonymousSession) (input: literal "{\"session_id\": \"fjaksdjfkajsdjfa\"}") @LoginRepository.swift:22
+    failure
+      cast fails (request) → vm.error ← DomainError.mapFailure
+2 JSONDecoder.decode(AnonymousSession) (input: literal "{\"session_id\": \"fjaksdjfkajsdjfa\"}") @:37
     success
-      !entity.isEmpty → LoginViewModel.state ← .main → #1–#6 ⚠ never runs: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
-    ⚠ stops: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
-⚠ input is not valid JSON (LoginRepository.swift:17)
+      !entity.isEmpty → vm.state ← .main
+    failure
+      on failure → vm.error ← error
+      cast fails (domain) → vm.error ← DomainError.mapFailure
 
 No data access: F1
 

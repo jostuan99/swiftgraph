@@ -2,6 +2,13 @@ ProfileViewController [UIViewController] @Sources/CleanApp/Presentation/Profile/
 # api = https://api.example.com
 # vm = ProfileViewModel
 
+INPUT none
+ from ProductListViewController (push): no arguments @ProductListViewController.swift:69
+
+OUTPUT none
+
+FLOWS (3)
+
 F1 create ProfileViewController init → viewModel = ProfileViewModel() @ProfileViewController.swift:5
 1 vm.notificationsEnabled ← read userDefaults "notificationsEnabled" @ProfileViewModel.swift:11
 

@@ -1,6 +1,6 @@
 {
   "sources": [
     { "id": "app.token-read", "kind": "local.keychain", "call": "TokenStore.read(key:)", "key": "key", "type": { "fixed": "String?" } },
-    { "id": "app.token-save", "kind": "local.keychain", "call": "TokenStore.save(_:key:)", "key": "key", "direction": "write" }
+    { "id": "app.token-save", "kind": "local.keychain", "call": "TokenStore.save(_:key:)", "key": "key", "direction": "write" },
   ]
 }

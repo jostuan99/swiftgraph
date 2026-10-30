@@ -17,6 +17,7 @@ import {
   formatImpact,
   formatIssues,
   formatNeighbors,
+  formatOutline,
   formatPath,
   formatSearch,
   formatSource,
@@ -65,44 +66,55 @@ function run(action: () => string): ToolResult {
   }
 }
 
-// Sent to the client on initialize: how to read the output of the screen tools.
-export const INSTRUCTIONS = `swiftgraph answers questions about a Swift codebase from a prebuilt graph (read-only, offline). Call graph_overview first.
+// Sent to the client on initialize, so kept short: it costs tokens in every session.
+export const INSTRUCTIONS = `swiftgraph answers questions about a Swift codebase from a prebuilt graph (read-only, offline). Read from coarse to fine and stop when you know enough: graph_overview (modules, areas, screens) → search_symbols / get_symbol → get_outline (signatures of a file or type, no bodies) → get_source (one declaration). For behavior use get_callers / get_callees / find_path (calls through protocols are followed to their implementations); for a screen, get_screen_definition (what it shows, where each value comes from) and get_screen_flows (what runs from each entry point). Start narrow (small depth, one item or entry) and add detail only when needed. In answers, ":N" is line N of the file named last above, ".member" is a member of the symbol in the heading, and names leave out the module when the project has only one. Relations marked inferred come from name resolution without a type checker: confirm critical conclusions with get_source.`;
 
-Screens: get_screen_definition tells what a screen shows and where each value comes from; get_screen_flows tells what runs from each entry point. Both return compact text by default. How to read it:
-
-Common
-- First line: Screen [kind] @file:line. "@file:line" is a source location; "@:N" is line N of the last file named above.
+// How to read the output of the screen tools: sent once per session, with the
+// first answer of each tool, instead of in INSTRUCTIONS.
+const LEGEND_COMMON = `- First line: Screen [kind] @file:line. "@file:line" is a source location; "@:N" is line N of the last file named above.
 - "#" lines are a legend: "# api = <host>" (paths below are relative to it), "# vm = <type>" ("vm." means that view model), "# di: Protocol → Impl file:line" (DI bindings used).
 - "#N" is an item of the screen; "Cell#N (in #M)" is an item of a child view, cell or row shown inside item #M; "#1–#6" is a range. Pass ids as item (get_screen_definition) or entry (get_screen_flows).
 - "⚠" marks a likely bug found statically. Confirm it with get_source before reporting it.
-- "More: ..." names options that add detail.
+- "More: ..." names options that add detail.`;
 
-get_screen_definition
-- "state:" properties that hold screen data; "children:" child views, cells, rows and the item they belong to.
+export const LEGEND = {
+  define: `How to read get_screen_definition (shown once per session):
+${LEGEND_COMMON}
+- "state:" properties that hold screen data; "children:" child views, cells, rows and the item they belong to; "(navigation push)" / "(navigation modal)" = another screen shown from this one (its INPUT and OUTPUT are in get_screen_flows).
 - ITEMS columns: id | line | kind (UI type) | dir (display, input, action, list) | when (condition for the item to show; empty = always) | datasource.
-- datasource: "GET /path field" (API response field; items[].x = field of each element, JSON key as written in the response); userDefaults/keychain/file "key"; localization "key" ("missing en" = no translation); "error GET /path" (message of a caught error of that request); "vm.x" (variable bound to an input) with its placeholder.
-- SUMMARY, one line per source: api (endpoint, response type, fields used), local, file, error, localization (key count, missing languages), input ("not read elsewhere" = value never used), unresolved (values not traced: the answer may be incomplete).
-- detail=true adds DATA: for each item its sources and the path "→ A [Layer] → B [Layer]" from the source up to the view; "from:" inputs of a computed value; "value:" where a stored value comes from. It also adds CONDITIONS.
-
-get_screen_flows (default: data view)
+- datasource: "GET /path field" (API response field; items[].x = field of each element, JSON key as written in the response); userDefaults/keychain/file "key"; localized "text" (what the app shows in the default language); "localized missing" = the default language has no text, so the app shows the key (detail=true prints the key and every translation); "error GET /path" (message of a caught error of that request); "vm.x" (variable bound to an input) with its placeholder.
+- SUMMARY, one line per source: api (endpoint, response type, fields used), local, file, error, localized (strings table, default language, key count, missing languages), input ("not read elsewhere" = value never used), unresolved (values not traced: the answer may be incomplete).
+- detail=true adds DATA: for each item its sources and the path "→ A [Layer] → B [Layer]" from the source up to the view; "from:" inputs of a computed value; "value:" where a stored value comes from. It also adds CONDITIONS.`,
+  flows: `How to read get_screen_flows (shown once per session):
+${LEGEND_COMMON}
+- INPUT (after the first line), then OUTPUT, then "FLOWS (n)"; sections are separated by an empty line.
+- INPUT: data the screen receives: param | type | how (init selector, memberwise, binding, environment, or a project kind from the "inputs" rules) | default | into (property filled); then "from <creator> (push|modal): label: value ← source" for each place that creates the screen or calls an input method; how "property" = set by the creator after creating the screen.
+- OUTPUT: screens pushed or presented: id | transition (push, modal, or a project transition; "via" names the router method) | to | trigger (item tapped, modifier, or method) | when | parameters: values the next screen receives, named by its parameter or property ("item: row ← source" = argument; "item = row" = property set before the transition; "configure(with:) title: x" = input method called before it). Flows leave out the push/modal steps and the flows that only show another screen, since OUTPUT lists them (steps=true keeps every step).
 - "F<n> <kind> <trigger> @file:line" starts a flow. kind: create (init), action (tap; #N is the item), appear, task, lifecycle (viewDidLoad...), refresh, change, receive.
 - Numbered steps are the gets and sets of data in execution order: "read <store> \\"key\\"", "write <store> \\"key\\" ← value", "GET /path → Type" (request), "set vm.x ← value" (view-model write); "(→ #3)" = items that show the value.
 - Under a request, "success" and "failure" list what changes: "vm.x ← field → #1" (response field stored in the view model, shown by item #1); indented ".name ← items[].product_name" = field mapping after map; "(formatted)" = value transformed; "catch ... →" = the catch branch that runs.
 - "errors:" how failures are handled; "try? → x ⚠ error ignored" and "⚠ no error handling on this flow" = failures are lost.
 - "⚠ stops: <reason>" the flow cannot go past this step; "⚠ never runs: <reason>" an unreachable write; "⚠ empty" a handler with an empty body.
 - "No data access: F2" = flows that read and write no data.
-- calls=true: the numbered calls through the layers; "[Layer]" is written only when the layer changes; "(Mapper = X)" generic bindings; "a → map {…} → sink" Combine chains; "success/failure → N" = step N handles the result; "writes" = view-model properties set. until="Repository": every step down to that layer, deeper calls folded into it as "(→ api …)". layers=[...]: only those layers. steps=true: every step.
-
-Start narrow (item, entry, sources, include_children=false) and add detail, calls or steps only when needed.`;
+- calls=true: the numbered calls through the layers; "[Layer]" is written only when the layer changes; "(Mapper = X)" generic bindings; "a → map {…} → sink" Combine chains; "success/failure → N" = step N handles the result; "writes" = view-model properties set. until="Repository": every step down to that layer, deeper calls folded into it as "(→ api …)". layers=[...]: only those layers. steps=true: every step.`,
+};
 
 export function createServer(db: Db, root: string): McpServer {
   const server = new McpServer({ name: 'swiftgraph', version: '0.0.1' }, { instructions: INSTRUCTIONS });
   const readOnly = { readOnlyHint: true, openWorldHint: false };
+  // The legend of a screen tool goes with its first text answer of the session.
+  const legendSent = new Set<keyof typeof LEGEND>();
+  const withLegend = (tool: keyof typeof LEGEND, format: string, answer: string) => {
+    if (format === 'json' || legendSent.has(tool)) return answer;
+    legendSent.add(tool);
+    return `${answer}\n\n${LEGEND[tool]}`;
+  };
 
   server.registerTool(
     'graph_overview',
     {
-      description: 'Overview of the Swift codebase: modules, areas, most depended-on symbols, entry points, localization. Call this first.',
+      description:
+        'Overview of the Swift codebase: modules, areas, screens, most depended-on symbols, entry points, localization. Call this first.',
       inputSchema: {},
       annotations: readOnly,
     },
@@ -150,25 +162,29 @@ export function createServer(db: Db, root: string): McpServer {
     },
     ({ screen, entry, depth, include_children, until, layers, steps, calls, format, budget }) =>
       run(() =>
-        flowsText(db, root, {
-          screen,
-          children: include_children !== false,
-          steps: steps === true,
-          calls: calls === true,
-          ...(layers ? { layers } : {}),
-          ...(until ? { until } : {}),
-          ...(entry ? { entry } : {}),
-          ...(depth !== undefined ? { depth } : {}),
-          format: format ?? 'compact',
-          budget: budget ?? 4000,
-        }),
+        withLegend(
+          'flows',
+          format ?? 'compact',
+          flowsText(db, root, {
+            screen,
+            children: include_children !== false,
+            steps: steps === true,
+            calls: calls === true,
+            ...(layers ? { layers } : {}),
+            ...(until ? { until } : {}),
+            ...(entry ? { entry } : {}),
+            ...(depth !== undefined ? { depth } : {}),
+            format: format ?? 'compact',
+            budget: budget ?? 4000,
+          }),
+        ),
       ),
   );
   server.registerTool(
     'get_screen_definition',
     {
       description:
-        'Items of a screen (SwiftUI view, view controller, cell) and where the data of each item comes from: API response field with type and JSON key, UserDefaults/Keychain/file, localization key, user input; conditions that decide which items show. Rules come from swiftgraph.json and presets.',
+        'Items of a screen (SwiftUI view, view controller, cell) and where the data of each item comes from: API response field with type and JSON key, UserDefaults/Keychain/file, localization key, user input; conditions that decide which items show. Rules come from swiftgraph.yaml (or .json) and presets.',
       inputSchema: {
         screen: text().describe('view type name, qualified name or file path'),
         include_children: z.boolean().optional().describe('include child views, cells and rows (default true)'),
@@ -190,16 +206,20 @@ export function createServer(db: Db, root: string): McpServer {
     },
     ({ screen, include_children, depth, sources, item, detail, format, budget }) =>
       run(() =>
-        defineText(db, root, {
-          screen,
-          children: include_children !== false,
-          ...(depth !== undefined ? { depth } : {}),
-          ...(sources ? { sources } : {}),
-          ...(item ? { item } : {}),
-          detail: detail === true,
-          format: format ?? 'compact',
-          budget: budget ?? 4000,
-        }),
+        withLegend(
+          'define',
+          format ?? 'compact',
+          defineText(db, root, {
+            screen,
+            children: include_children !== false,
+            ...(depth !== undefined ? { depth } : {}),
+            ...(sources ? { sources } : {}),
+            ...(item ? { item } : {}),
+            detail: detail === true,
+            format: format ?? 'compact',
+            budget: budget ?? 4000,
+          }),
+        ),
       ),
   );
   server.registerTool(
@@ -316,6 +336,16 @@ export function createServer(db: Db, root: string): McpServer {
       annotations: readOnly,
     },
     ({ area, budget: size }) => run(() => formatCommunity(db, area, size ?? DEFAULT_BUDGET)),
+  );
+  server.registerTool(
+    'get_outline',
+    {
+      description:
+        'Signatures and line ranges of the declarations of a Swift file, or of a type with its members and extensions, without bodies. Read this before get_source.',
+      inputSchema: { target: text(500).describe('file path (or its end, e.g. Login/LoginView.swift), or a type symbol'), budget },
+      annotations: readOnly,
+    },
+    ({ target, budget: size }) => run(() => formatOutline(db, target, size ?? 3000)),
   );
   server.registerTool(
     'get_source',

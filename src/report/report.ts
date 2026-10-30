@@ -5,6 +5,7 @@
 import { basename } from 'node:path';
 import type { Db } from '../store/db.ts';
 import { getMeta } from '../store/db.ts';
+import { modulePrefix } from '../query/text.ts';
 
 const TYPE_KINDS = "('class', 'struct', 'enum', 'actor', 'protocol')";
 
@@ -28,10 +29,17 @@ export function graphReport(db: Db, root: string): string {
       .get(...parameters) as T;
   const all = <T>(sql: string, ...parameters: unknown[]) => db.prepare(sql).all(...parameters) as T[];
   const parts: string[] = [];
+  // Names without the module when the project has only one.
+  const prefix = modulePrefix(db);
+  const short = (name: string) => (prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name);
 
   const swiftFiles = one<number>("SELECT COUNT(*) FROM files WHERE kind = 'swift'");
   const localizationFiles = one<number>("SELECT COUNT(*) FROM files WHERE kind != 'swift'");
-  const modules = one<number>("SELECT COUNT(*) FROM modules WHERE kind = 'target'");
+  // Modules with declarations: not the package manifest's own.
+  const modules = one<number>(
+    `SELECT COUNT(*) FROM modules m WHERE m.kind = 'target' AND EXISTS (
+       SELECT 1 FROM files f JOIN nodes n ON n.file_id = f.id WHERE f.module_id = m.id AND n.kind NOT IN ('file', 'module', 'property'))`,
+  );
   const declarations = one<number>(
     "SELECT COUNT(*) FROM nodes WHERE kind NOT IN ('module', 'file', 'external_symbol', 'localization_table', 'localized_string')",
   );
@@ -56,7 +64,10 @@ export function graphReport(db: Db, root: string): string {
            (SELECT COUNT(*) FROM nodes n JOIN files f ON f.id = n.file_id WHERE f.module_id = m.id AND n.kind IN ${TYPE_KINDS}) AS types,
            (SELECT COUNT(*) FROM nodes n JOIN files f ON f.id = n.file_id WHERE f.module_id = m.id AND n.kind IN ('function', 'initializer')) AS functions
          FROM modules m WHERE m.kind = 'target' ORDER BY files DESC LIMIT 15`,
-      ).map((row) => [row.name, row.files, row.types, row.functions]),
+      )
+        // A module with no declarations is the package manifest's own.
+        .filter((row) => row.types + row.functions > 0)
+        .map((row) => [row.name, row.files, row.types, row.functions]),
     ),
   );
 
@@ -70,23 +81,25 @@ export function graphReport(db: Db, root: string): string {
   parts.push(
     table(
       ['#', 'Area', 'Size', 'Key types'],
-      all<{ id: number; label: string; size: number }>('SELECT id, label, size FROM communities ORDER BY size DESC LIMIT 12').map((row) => [
-        row.id,
-        row.label,
-        row.size,
-        (keySymbols.all(row.id) as string[]).join(', '),
-      ]),
+      all<{ id: number; label: string; size: number }>('SELECT id, label, size FROM communities ORDER BY size DESC LIMIT 12').map((row) => {
+        const label = short(row.label);
+        // The area is named after its first key type: not repeated.
+        const types = (keySymbols.all(row.id) as string[]).map(short).filter((name) => !label.startsWith(`${name} `));
+        return [row.id, label, row.size, types.join(', ')];
+      }),
     ),
   );
 
-  parts.push('## Most depended-on symbols\n');
+  parts.push(screens(db, short));
+
+  parts.push('## Most depended-on symbols (by PageRank)\n');
   parts.push(
     table(
       ['Symbol', 'Kind', 'Used by', 'Location'],
       all<{ qualified_name: string; kind: string; fan_in: number; path: string | null; start_line: number | null }>(
         `SELECT n.qualified_name, n.kind, n.fan_in, f.path, n.start_line FROM nodes n LEFT JOIN files f ON f.id = n.file_id
          WHERE n.pagerank IS NOT NULL ORDER BY n.pagerank DESC LIMIT 15`,
-      ).map((row) => [row.qualified_name, row.kind, row.fan_in, row.path ? `${row.path}:${row.start_line}` : '']),
+      ).map((row) => [short(row.qualified_name), row.kind, row.fan_in, row.path ? `${row.path}:${row.start_line}` : '']),
     ),
   );
 
@@ -105,7 +118,7 @@ export function graphReport(db: Db, root: string): string {
   parts.push(
     entries.length === 0
       ? '_none found_\n'
-      : `${entries.map((row) => `- ${row.qualified_name} (${row.why}) — ${row.path}:${row.start_line}`).join('\n')}\n`,
+      : `${entries.map((row) => `- ${short(row.qualified_name)} (${row.why}) — ${row.path}:${row.start_line}`).join('\n')}\n`,
   );
 
   // Unusual links: large areas joined by a single edge. Often accidental
@@ -129,7 +142,9 @@ export function graphReport(db: Db, root: string): string {
   );
   if (bridges.length > 0) {
     parts.push('## Unusual links between areas\n');
-    parts.push(`${bridges.map((row) => `- ${row.source} ${row.kind} ${row.target} (${row.a} → ${row.b})`).join('\n')}\n`);
+    parts.push(
+      `${bridges.map((row) => `- ${short(row.source)} ${row.kind} ${short(row.target)} (${short(row.a)} → ${short(row.b)})`).join('\n')}\n`,
+    );
   }
 
   const tables = one<number>('SELECT COUNT(*) FROM localization_tables');
@@ -155,14 +170,61 @@ export function graphReport(db: Db, root: string): string {
     );
   }
 
-  parts.push('## How to query\n');
   parts.push(
-    [
-      '- `swiftgraph strings find|show|of|issues ...` — localization keys, translations, usages, issues',
-      '- `swiftgraph stats` — counts by edge kind and confidence',
-      '- Edges: CALLS, INSTANTIATES, READS, WRITES, REFERENCES, CONFORMS_TO, INHERITS, EXTENDS, IMPLEMENTS, OVERRIDES, RENDERS, TESTS, WRAPS, EXPANDS, USES_STRING; confidence EXTRACTED > INFERRED > AMBIGUOUS.',
-      '',
-    ].join('\n'),
+    'Next: get_screen_definition / get_screen_flows <screen>, get_outline <file or type>, search_symbols <name>, get_symbol <symbol>.\n',
   );
   return parts.join('\n');
+}
+
+/** SDK types a screen inherits from or conforms to, and how the screen is listed. */
+const SCREEN_BASES: [string, string][] = [
+  ['swift:SwiftUI/View', 'SwiftUI View'],
+  ['swift:UIKit/UIViewController', 'UIViewController'],
+  ['swift:AppKit/NSViewController', 'NSViewController'],
+];
+
+/**
+ * Screens, for get_screen_definition and get_screen_flows: view controllers and
+ * SwiftUI views that no other view renders. Views rendered inside another one
+ * (rows, subviews, NavigationLink destinations) are named on one line.
+ */
+function screens(db: Db, short: (name: string) => string): string {
+  const rows = db.prepare(
+    `WITH RECURSIVE base(id, kind) AS (
+         SELECT n.id, ? FROM nodes n WHERE n.symbol_id = ?
+         UNION
+         SELECT e.source_id, b.kind FROM edges e JOIN base b ON e.target_id = b.id
+         WHERE e.kind IN ('INHERITS', 'CONFORMS_TO') AND e.confidence != 'AMBIGUOUS'
+       )
+       SELECT DISTINCT n.id, n.qualified_name AS name, b.kind, f.path, n.start_line AS line
+       FROM base b JOIN nodes n ON n.id = b.id LEFT JOIN files f ON f.id = n.file_id
+       WHERE n.kind IN ('class', 'struct', 'enum', 'actor') AND n.symbol_id NOT GLOB 'swift:*Tests/*'
+       ORDER BY f.path, n.start_line`,
+  );
+  const found = SCREEN_BASES.flatMap(
+    ([symbol, kind]) => rows.all(kind, symbol) as { id: number; name: string; kind: string; path: string | null; line: number | null }[],
+  );
+  if (found.length === 0) return '';
+  // Rendered by a member of another view (not by an App scene, say).
+  const views = new Set(found.map((row) => row.id));
+  const renderedBy = db
+    .prepare(
+      `SELECT r.target_id AS view, COALESCE(c.source_id, r.source_id) AS owner FROM edges r
+       LEFT JOIN edges c ON c.target_id = r.source_id AND c.kind = 'CONTAINS'
+       WHERE r.kind = 'RENDERS'`,
+    )
+    .all() as { view: number; owner: number }[];
+  const nested = new Set(renderedBy.filter((row) => views.has(row.owner) && row.owner !== row.view).map((row) => row.view));
+  const top = found.filter((row) => !nested.has(row.id));
+  const inside = found.filter((row) => nested.has(row.id));
+  const limit = 40;
+  const lines = top.slice(0, limit).map((row) => `- ${short(row.name)} [${row.kind}] ${row.path ?? ''}:${row.line ?? 1}`);
+  if (top.length > limit) lines.push(`- … ${top.length - limit} more (search_symbols)`);
+  if (inside.length > 0) {
+    const names = inside.map((row) => short(row.name));
+    lines.push(
+      `- Rendered inside or opened from another view: ${names.slice(0, limit).join(', ')}${names.length > limit ? `, … ${names.length - limit} more` : ''}`,
+    );
+  }
+  return `## Screens\n\n${lines.join('\n')}\n`;
 }

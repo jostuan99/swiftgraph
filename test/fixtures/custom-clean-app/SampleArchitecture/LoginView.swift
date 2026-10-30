@@ -9,30 +9,52 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            if vm.state == .login {
-                VStack {
-                    HStack {
-                        TextField("First Name",text: $vm.firstName)
-                            .textFieldStyle(.roundedBorder)
-                        TextField("Last Name",text: $vm.lastName)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                    TextField("Phone Number",text: $vm.phoneNumber)
+            VStack {
+                HStack {
+                    TextField(Localization.loginFirstName.localized,text: $vm.firstName)
                         .textFieldStyle(.roundedBorder)
-                    TextField("Customer Number",text: $vm.customerNumber)
+                    TextField("loginLastName",text: $vm.lastName)
                         .textFieldStyle(.roundedBorder)
-                    Button(action: { vm.anonymousSession() }) {
-                        Text("Login")
-                            .padding(12)
-                            .frame(maxWidth: .infinity)
-                            .clipShape(Capsule())
-                    }
                 }
-                .padding(.horizontal, 16)
-            } else {
-                Text("Hello, user")
-                    .font(.largeTitle)
+                TextField(Localization.loginPhoneNumber
+                    .localized,text: $vm.phoneNumber)
+                .textFieldStyle(.roundedBorder)
+                TextField("loginCustomerNumber",text: $vm.customerNumber)
+                    .textFieldStyle(.roundedBorder)
+                Button(action: { vm.anonymousSession() }) {
+                    Text("loginButton")
+                        .padding(12)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(Capsule())
+                }
+                VStack {
+                    Text("Push")
+                        .font(.largeTitle)
+                        .onTapGesture {
+                            TopRoutingManager.shared.push(DetailView(), animated: true)
+                        }
+                    Text("Sheet")
+                        .font(.largeTitle)
+                        .onTapGesture {
+                            TopRoutingManager.shared.sheet(DetailView(), animated: true)
+                        }
+                }
             }
+            .padding(.horizontal, 16)
+
         }
     }
+}
+
+struct DetailView: View {
+
+    var body: some View {
+        ZStack {
+            Color.clear
+        }
+    }
+}
+
+#Preview {
+    LoginView()
 }

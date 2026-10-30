@@ -1,7 +1,7 @@
 {
   "name": "uikit",
   "description": "UIKit views built in code: properties and methods that show data, cells, lifecycle entry points",
-  "whenImports": ["UIKit"],
+  "whenImports": ["UIKit", "SwiftUI"],
   "layers": [{ "id": "uikit.view", "layer": "View", "match": { "inherits": ["UIViewController", "UIView"] } }],
   "sinks": [
     { "id": "uikit.label-text", "property": "UILabel.text", "direction": "display", "role": "text" },
@@ -32,6 +32,14 @@
     { "id": "uikit.cell", "match": { "inherits": ["UITableViewCell", "UICollectionViewCell"] } },
     { "id": "uikit.cell-name", "match": { "name": "*Cell", "inherits": "UIView" } }
   ],
+  "navigation": [
+    { "id": "uikit.push", "call": "*.pushViewController(_:animated:)", "destination": [0] },
+    { "id": "uikit.present", "call": "*.present(_:animated:completion:)", "destination": [0], "transition": "modal" },
+    { "id": "uikit.show", "call": "*.show(_:sender:)", "destination": [0] },
+    { "id": "uikit.show-detail", "call": "*.showDetailViewController(_:sender:)", "destination": [0] },
+    { "id": "uikit.set-view-controllers", "call": "*.setViewControllers(_:animated:)", "destination": [0] }
+  ],
+  "inputs": [{ "id": "uikit.init-coder", "kind": "storyboard", "initializer": "init(coder:)", "ignore": true }],
   "entryPoints": [
     { "id": "uikit.view-did-load", "method": "viewDidLoad()", "match": { "inherits": "UIViewController" }, "kind": "lifecycle" },
     { "id": "uikit.view-will-appear", "method": "viewWillAppear(_:)", "match": { "inherits": "UIViewController" }, "kind": "lifecycle" },

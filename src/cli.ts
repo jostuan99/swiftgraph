@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
-import { build } from './build.ts';
+import { build, sync, type BuildResult } from './build.ts';
 import { databasePath, getMeta, isEncrypted, latestSchemaVersion, openDatabase, rekeyDatabase, schemaVersion } from './store/db.ts';
 import { findKey, generateKey, KEY_ENVIRONMENT_VARIABLE, storeKeychainKey } from './store/key.ts';
 import { localizationIssues, searchStrings, stringDetails, stringsOfSymbol } from './query/strings.ts';
@@ -22,11 +22,12 @@ import {
   formatNeighbors,
   formatPath,
   formatSearch,
+  formatOutline,
   formatSource,
   formatSymbol,
   formatTraversal,
 } from './query/text.ts';
-import { defineText, flowsText } from './flow/commands.ts';
+import { defineText, flowsText, rulesText, SCREEN_RULE_KINDS } from './flow/commands.ts';
 import type { FlowsFormat } from './flow/format-flows.ts';
 import type { DefineFormat } from './flow/format-define.ts';
 import { RuleError } from './rules/load.ts';
@@ -103,13 +104,40 @@ program
       },
       warn,
     });
-    console.log(
-      `files: ${result.files}; extracted: ${result.extracted}; unchanged: ${result.unchanged}; ` +
-        `removed: ${result.removed}; with syntax errors: ${result.withErrors.length}; ` +
-        `nodes: ${result.nodes}; edges: ${result.edges}; graph update: ${result.graphUpdate}; ${result.durationMs} ms`,
-    );
-    for (const skipped of result.skippedLarge) warn(`skipped large file ${skipped}`);
+    printBuild(result);
   });
+
+program
+  .command('sync')
+  .description('Update the graph database with the files changed since the last build, using the options of that build')
+  .argument('[root]', 'repository root', '.')
+  .option('--db <path>', 'database path (default: <root>/.swiftgraph/graph.db)')
+  .option('--workers <count>', 'number of parser processes', (value) => Number.parseInt(value, 10))
+  .option('--list', 'list the files added, changed and removed')
+  .action(async (rootArgument: string, options) => {
+    const { root, path } = locate(rootArgument, options.db);
+    if (!existsSync(path)) program.error(`no graph database at ${path}; run \`swiftgraph build\` first`);
+    const result = await sync(root, {
+      ...(options.workers ? { workers: options.workers } : {}),
+      database: path,
+      key: keyFor(root, path),
+      warn,
+    });
+    printBuild(result);
+    if (options.list) {
+      for (const changed of result.changedPaths) console.log(`  ~ ${changed}`);
+      for (const removed of result.removedPaths) console.log(`  - ${removed}`);
+    }
+  });
+
+function printBuild(result: BuildResult): void {
+  console.log(
+    `files: ${result.files}; extracted: ${result.extracted}; unchanged: ${result.unchanged}; ` +
+      `removed: ${result.removed}; with syntax errors: ${result.withErrors.length}; ` +
+      `nodes: ${result.nodes}; edges: ${result.edges}; graph update: ${result.graphUpdate}; ${result.durationMs} ms`,
+  );
+  for (const skipped of result.skippedLarge) warn(`skipped large file ${skipped}`);
+}
 
 program
   .command('stats')
@@ -529,10 +557,41 @@ queryCommand('flows', 'Processing flows of a screen: each entry point and its st
     }),
   );
 
+program
+  .command('rules')
+  .description(
+    'Print the rules in effect (presets and swiftgraph.yaml/.json) as a YAML template: edit a rule and keep its id to replace the preset rule',
+  )
+  .option('--root <root>', 'repository root', '.')
+  .option('--db <path>', 'database path')
+  .option(
+    '--kind <list>',
+    `rule kinds, comma separated, or all (default ${SCREEN_RULE_KINDS.join(',')}: INPUT and OUTPUT of flows, default language)`,
+  )
+  .option('--write', 'write them into the rule file (swiftgraph.yaml when there is none), keeping its other keys')
+  .action((options) =>
+    withDatabase(options.root, options.db, (db) => {
+      try {
+        console.log(
+          rulesText(db, resolve(options.root), options.kind ? String(options.kind).split(',') : undefined, options.write === true),
+        );
+      } catch (error) {
+        if (error instanceof RuleError) program.error(error.message);
+        throw error;
+      }
+    }),
+  );
+
 queryCommand('area', 'An area (community) of the codebase: key members and linked areas')
   .argument('<area-or-symbol>')
   .action((area: string, options) =>
     withDatabase(options.root, options.db, (db) => console.log(formatCommunity(db, area, options.budget))),
+  );
+
+queryCommand('outline', 'Signatures of the declarations of a file, or of a type and its extensions, without bodies')
+  .argument('<target>', 'Swift file path, or a type or extension symbol')
+  .action((target: string, options) =>
+    withDatabase(options.root, options.db, (db) => console.log(formatOutline(db, target, options.budget))),
   );
 
 queryCommand('source', 'Source code of a declaration')

@@ -1,25 +1,25 @@
-ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:4
+ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:5
 # api = https://api.example.com
 # vm = ProductListViewModel
-  state: viewModel: ProductListViewModel @ProductListViewController.swift:5
-  children: ProductCell (cell of #5)
+  state: viewModel: ProductListViewModel @ProductListViewController.swift:6
+  children: ProductCell (cell of #5); ProfileViewController (navigation push); ProfileView (navigation modal)
 
 ITEMS (7)
  id | line | kind | dir | when | datasource
- #1 | :30 | UILabel | display | | GET /v1/products title
- #2 | :36 | UILabel | display | let date && !(date == nil) | userDefaults "lastUpdated"
- #3 | :43 | UILabel | display | !(message == nil) | error GET /v1/products
- #4 | :26 | UIButton | action | | localization "refresh"
- #5 | :57 | UITableView | list | | GET /v1/products items
- ProductCell#1 (in #5) | :72 | UILabel | display | | GET /v1/products items[].product_name
- ProductCell#2 (in #5) | :73 | UILabel | display | | GET /v1/products items[].price
+ #1 | :31 | UILabel | display | | GET /v1/products title
+ #2 | :37 | UILabel | display | let date && !(date == nil) | userDefaults "lastUpdated"
+ #3 | :44 | UILabel | display | !(message == nil) | error GET /v1/products
+ #4 | :27 | UIButton | action | | localized "Refresh"
+ #5 | :58 | UITableView | list | | GET /v1/products items
+ ProductCell#1 (in #5) | :81 | UILabel | display | | GET /v1/products items[].product_name
+ ProductCell#2 (in #5) | :82 | UILabel | display | | GET /v1/products items[].price
 
 DATA
  #1 text literal "" @ProductListViewModel.swift:11
      → vm.title [ViewModel] → ProductListViewController.viewDidLoad() [View]
    api GET "/v1/products" → serializingDecodable → ProductListResponse.title: String JSON "title" @ProductService.swift:17
      → ProductServiceImpl.fetchProducts() [Service] → ProductRepositoryImpl.products() [Repository] → vm.reload() [ViewModel] → ProductListViewController.viewDidLoad() [View]
- #2 text computed DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short) @ProductListViewController.swift:36
+ #2 text computed DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short) @ProductListViewController.swift:37
      from: local.userDefaults "lastUpdated" UserDefaults.object → Any? as Date (SettingsStore.swift:7)
      from: instance Date() (ProductListViewModel.swift:33)
  #3 text literal nil @ProductListViewModel.swift:26
@@ -28,8 +28,8 @@ DATA
      → vm.reload() [ViewModel] → ProductListViewController.viewDidLoad() [View]
    error.localizedDescription thrown by repository.products() (GET /v1/products) @:37
      → vm.reload() [ViewModel] → ProductListViewController.viewDidLoad() [View]
- #4 title localization Localizable "refresh" en "Refresh", ja "更新" @ProductListViewController.swift:26
-  action #selector(didTapRefresh) @:27
+ #4 title localized Localizable "refresh" default en "Refresh", ja "更新" @ProductListViewController.swift:27
+  action #selector(didTapRefresh) @:28
    flows: swiftgraph flows ProductListViewController --entry ProductListViewController#4
  #5 rows local.file JSONDecoder.decode → [ProductDTO] @ProductCache.swift:8
      → ProductCache.load() [Storage] → ProductRepositoryImpl.cachedProducts() [Repository] → vm.init(repository:settings:) [ViewModel]
@@ -52,5 +52,5 @@ SUMMARY
  local "lastUpdated" UserDefaults.object → Any?
  file JSONDecoder.decode → [ProductDTO] [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")" Data(contentsOf:) → Data
  error GET /v1/products
- localization Localizable: 1 key
+ localized Localizable (default en): 1 key
  unresolved none

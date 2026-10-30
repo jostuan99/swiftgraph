@@ -180,6 +180,15 @@
       "key": 0
     },
     {
+      "id": "foundation.bundle-localized-string",
+      "kind": "localization",
+      "call": "Bundle.localizedString(forKey:value:table:)",
+      "type": {
+        "fixed": "String"
+      },
+      "key": "forKey"
+    },
+    {
       "id": "foundation.string-localized",
       "kind": "localization",
       "call": "String(localized:table:bundle:locale:comment:)",

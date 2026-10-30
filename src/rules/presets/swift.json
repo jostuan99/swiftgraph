@@ -1,0 +1,8 @@
+{
+  "name": "swift",
+  "description": "Swift language: initializer parameters and memberwise properties are what a screen receives",
+  "inputs": [
+    { "id": "swift.init", "kind": "init", "initializer": "init(*" },
+    { "id": "swift.memberwise", "kind": "memberwise", "memberwise": true }
+  ]
+}

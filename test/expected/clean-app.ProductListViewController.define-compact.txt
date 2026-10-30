@@ -1,23 +1,23 @@
-ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:4
+ProductListViewController [UIViewController] @Sources/CleanApp/Presentation/ProductListViewController.swift:5
 # api = https://api.example.com
- state: viewModel: ProductListViewModel @ProductListViewController.swift:5
- children: ProductCell (cell of #5)
+ state: viewModel: ProductListViewModel @ProductListViewController.swift:6
+ children: ProductCell (cell of #5); ProfileViewController (navigation push); ProfileView (navigation modal)
 
 ITEMS (7)
  id | line | kind | dir | when | datasource
- #1 | :30 | UILabel | display | | GET /v1/products title
- #2 | :36 | UILabel | display | let date && !(date == nil) | userDefaults "lastUpdated"
- #3 | :43 | UILabel | display | !(message == nil) | error GET /v1/products
- #4 | :26 | UIButton | action | | localization "refresh"
- #5 | :57 | UITableView | list | | GET /v1/products items
- ProductCell#1 (in #5) | :72 | UILabel | display | | GET /v1/products items[].product_name
- ProductCell#2 (in #5) | :73 | UILabel | display | | GET /v1/products items[].price
+ #1 | :31 | UILabel | display | | GET /v1/products title
+ #2 | :37 | UILabel | display | let date && !(date == nil) | userDefaults "lastUpdated"
+ #3 | :44 | UILabel | display | !(message == nil) | error GET /v1/products
+ #4 | :27 | UIButton | action | | localized "Refresh"
+ #5 | :58 | UITableView | list | | GET /v1/products items
+ ProductCell#1 (in #5) | :81 | UILabel | display | | GET /v1/products items[].product_name
+ ProductCell#2 (in #5) | :82 | UILabel | display | | GET /v1/products items[].price
 
 SUMMARY
  api GET /v1/products ProductListResponse title: String, items: [ProductDTO], items[].product_name: String, items[].price: Decimal
  local "lastUpdated" UserDefaults.object → Any?
  file JSONDecoder.decode → [ProductDTO] [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")" Data(contentsOf:) → Data
  error GET /v1/products
- localization Localizable: 1 key
+ localized Localizable (default en): 1 key
  unresolved none
 

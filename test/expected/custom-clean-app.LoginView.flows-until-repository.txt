@@ -2,6 +2,16 @@ LoginView [SwiftUI View] @SampleArchitecture/LoginView.swift:7
 # di: LoginUseCase → LoginUseCaseImpl DIContainer.swift:17; LoginRepository → LoginRepositoryImpl DIContainer.swift:13
 # vm = LoginViewModel
 
+INPUT none
+ from SampleArchitectureApp: no arguments @SampleArchitectureApp.swift:11
+
+OUTPUT (2)
+ id | transition | to | trigger | when | parameters
+ O1 | push via BaseRoutingManager.push(_:animated:) | DetailView | #6 .onTapGesture | | :34
+ O2 | modal via BaseRoutingManager.sheet(_:animated:dismiss:) | DetailView | #7 .onTapGesture | | :39
+
+FLOWS (2)
+
 F1 create LoginView init → vm = LoginViewModel() @LoginView.swift:8
 1 [View] vm = LoginViewModel() @:8
 2 [ViewModel] vm.init() @LoginViewModel.swift:25
@@ -11,20 +21,35 @@ F1 create LoginView init → vm = LoginViewModel() @LoginView.swift:8
 3 useCase = DIContainer.shared.getLoginUseCase() @:16
 4 [DI] DIContainer.getLoginUseCase() @DIContainer.swift:22
 
-F2 action #5 Button "Login" tap @LoginView.swift:24
-1 [ViewModel] vm.anonymousSession() @LoginViewModel+APIHandler.swift:6
-2 [UseCase] LoginUseCaseImpl.anonymous(_:) (Mapper = AnonymousViewModelMapper) @LoginUseCase.swift:22
-3 [Mapper] AnonymousEntityMapper.init() @AnonymousEntityMapper.swift:17
-4 [Repository] LoginRepositoryImpl.anonymousSession(_:) (Mapper = AnonymousEntityMapper; → api JSONDecoder.decode(AnonymousSession)) @LoginRepository.swift:14
-  success/failure → 5
-5 [UseCase] sink async @LoginUseCase.swift:27
-  success
-   RegisterEntityMapper.requestEntity ← Self.domainToRequest(domain) ⚠ never runs: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
-   !entity.isEmpty → vm.state ← .main → #1–#6 ⚠ never runs: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
-  failure
-   on failure → AnonymousViewModelMapper.error(_:) ⚠ empty
-   cast fails (domain) → AnonymousViewModelMapper.error(_:) ⚠ empty
-6 [Mapper] if let domain = domain as? Mapper.EntityResult → AnonymousViewModelMapper.mapping(_:) @AnonymousViewModelMapper.swift:12
-  ⚠ stops: cast AnonymousSession → String always fails (LoginUseCase.swift:34)
-⚠ input is not valid JSON (LoginRepository.swift:17)
+F2 action #5 Button "ログイン" tap @LoginView.swift:24
+ 1 [ViewModel] vm.anonymousSession() @LoginViewModel+APIHandler.swift:6
+ 2 [UseCase] LoginUseCaseImpl.anonymous(_:) (Mapper = AnonymousViewModelMapper) @LoginUseCase.swift:22
+ 3 [Mapper] AnonymousEntityMapper.init() @AnonymousEntityMapper.swift:17
+ 4 [Repository] LoginRepositoryImpl.anonymousSession(_:) (Mapper = AnonymousEntityMapper; → api JSONDecoder.decode(AnonymousSession)) @LoginRepository.swift:14
+   success/failure → 5
+ 5 [UseCase] sink async @LoginUseCase.swift:27
+   success
+    RegisterEntityMapper.requestEntity ← Self.domainToRequest(domain)
+   failure
+    on failure → AnonymousViewModelMapper.error(_:) ⚠ empty
+    cast fails (request) → RegisterViewModelMapper.error(_:)
+     ↳ vm.error ← DomainError.mapFailure
+ 6 [Mapper] if let domain = domain as? Mapper.EntityResult → AnonymousViewModelMapper.mapping(_:) @AnonymousViewModelMapper.swift:12
+ 7 [ViewModel] if !entity.isEmpty → vm.login() @LoginViewModel.swift:30
+ 8 [UseCase] LoginUseCaseImpl.register(_:) (Mapper = RegisterViewModelMapper) @LoginUseCase.swift:43
+ 9 [Mapper] RegisterViewModelMapper.getRequest() @RegisterViewModelMapper.swift:12
+10 RegisterEntityMapper.init(_:) @RegisterEntityMapper.swift:17
+11 RegisterEntityMapper.domainToRequest(_:) @:21
+12 [Repository] LoginRepositoryImpl.register(_:) (Mapper = RegisterEntityMapper; → api JSONDecoder.decode(AnonymousSession)) @LoginRepository.swift:29
+   success/failure → 13
+13 [UseCase] sink async @LoginUseCase.swift:51
+   success
+    !entity.isEmpty → vm.state ← .main
+   failure
+    on failure → RegisterViewModelMapper.error(_:)
+     ↳ vm.error ← error
+    cast fails (domain) → RegisterViewModelMapper.error(_:)
+     ↳ vm.error ← DomainError.mapFailure
+    cast fails (domain) → AnonymousViewModelMapper.error(_:) ⚠ empty
+14 [Mapper] if let domain = domain as? Mapper.EntityResult → RegisterViewModelMapper.mapping(_:) @RegisterViewModelMapper.swift:16
 

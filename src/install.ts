@@ -42,7 +42,7 @@ This repository has a code graph of its Swift code and localization files, serve
   - localized strings, translations, missing keys: \`search_strings\`, \`get_string\`, \`get_strings_for_symbol\`, \`get_localization_issues\`
   - what a screen shows and where each value comes from (API, UserDefaults/Keychain/file, localization): \`get_screen_definition\`
   - what runs when a screen appears or a button is tapped, layer by layer: \`get_screen_flows\`
-- Read code with \`get_source\` (one declaration) instead of whole files when possible.
+- Read code from coarse to fine instead of whole files: \`get_outline\` (signatures of a file or type, no bodies), then \`get_source\` (one declaration).
 - Relations marked \`inferred\` come from name resolution without a type checker; \`ambiguous\` ones are hidden unless requested. Confirm critical conclusions in the source.
 - Use grep for string literals, comments and non-Swift files.
 `;
@@ -139,11 +139,13 @@ description: Build or update the Swift code graph of this repository and answer 
 
 # swiftgraph
 
-Update the graph after code changes (fast when only a few files changed):
+Update the graph after code changes (fast when only a few files changed; keeps the options of the last build):
 
 \`\`\`sh
-${commandLine} build .
+${commandLine} sync .
 \`\`\`
+
+Without a database yet, build it first: \`${commandLine} build .\`.
 
 Prefer the \`swiftgraph\` MCP tools. Without them, use the CLI:
 
@@ -151,6 +153,7 @@ Prefer the \`swiftgraph\` MCP tools. Without them, use the CLI:
 ${commandLine} report .                         # overview
 ${commandLine} find <text> --root .
 ${commandLine} explain '<Type.member(label:)>' --root .
+${commandLine} outline <File.swift or Type> --root .
 ${commandLine} callers '<symbol>' --depth 2 --root .
 ${commandLine} impact <file.swift> --root .
 ${commandLine} strings show <key> --root .
@@ -190,7 +193,7 @@ ${AGENT_INSTRUCTIONS}`,
     if (!existsSync(join(root, '.git'))) throw new Error(`${root} is not a git repository (no .git directory)`);
     for (const hook of GIT_HOOKS) {
       const path = join(hooksDirectory, hook);
-      const block = `# Update the swiftgraph database in the background.\n(${commandLine} build "$(git rev-parse --show-toplevel)" >/dev/null 2>&1 &)`;
+      const block = `# Update the swiftgraph database in the background.\n(${commandLine} sync "$(git rev-parse --show-toplevel)" >/dev/null 2>&1 &)`;
       if (!existsSync(path)) writeFileSync(path, '#!/bin/sh\n', { mode: 0o755 });
       upsertBlock(path, block, SHELL_BEGIN, SHELL_END, changes, 0o755);
     }
@@ -262,7 +265,7 @@ export function postToolUseHint(input: unknown, hasGraph: boolean): string | nul
       hookEventName: 'PostToolUse',
       additionalContext:
         `"${pattern}" looks like a Swift symbol. The swiftgraph MCP tools answer structural questions with less reading: ` +
-        'search_symbols / get_symbol (definition and relations), get_callers / get_callees, get_impact, find_path, get_source.',
+        'search_symbols / get_symbol (definition and relations), get_callers / get_callees, get_impact, find_path, get_outline, get_source.',
     },
   });
 }

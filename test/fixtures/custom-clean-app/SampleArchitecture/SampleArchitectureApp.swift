@@ -8,7 +8,7 @@ import SwiftUI
 struct SampleArchitectureApp: App {
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            TopNavigationView(rootView: LoginView())
         }
     }
 }

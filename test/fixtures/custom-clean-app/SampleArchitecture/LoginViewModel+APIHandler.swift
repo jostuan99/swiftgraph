@@ -7,4 +7,8 @@ extension LoginViewModel {
         guard let anonymousViewModelMapper else { return }
         useCase.anonymous(anonymousViewModelMapper)
     }
+
+    func update() {
+        state = .main
+    }
 }

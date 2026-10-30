@@ -79,7 +79,11 @@ export function discover(root: string, options: DiscoverOptions = {}): Discovery
       const stat = lstatSync(join(root, path), { throwIfNoEntry: false });
       return [path, stat?.mtimeMs ?? 0, stat?.size ?? 0];
     }),
-    projects,
+    // `developmentRegion` is read from each project file.
+    projects: projects.map((path) => {
+      const stat = lstatSync(join(root, path, 'project.pbxproj'), { throwIfNoEntry: false });
+      return [path, stat?.mtimeMs ?? 0, stat?.size ?? 0];
+    }),
     // Xcode target folders are inferred from the directories holding files.
     folders: projects.length > 0 ? [...new Set(relevant.map(parentDirectory))].sort() : [],
   });

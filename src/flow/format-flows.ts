@@ -2,6 +2,7 @@
 
 import { compactText } from './compact.ts';
 import type { FlowOutcome, FlowStep, ScreenFlow, ScreenFlows } from './flows.ts';
+import { screenInputLines, screenIOJson, screenOutputLines } from './format-screen-io.ts';
 
 export type FlowsFormat = 'text' | 'compact' | 'pretty' | 'json' | 'markdown' | 'mermaid';
 
@@ -11,7 +12,10 @@ export type FlowsFormat = 'text' | 'compact' | 'pretty' | 'json' | 'markdown' | 
  * the layers; otherwise the data view (one step per get/set of data).
  */
 export function formatFlows(result: ScreenFlows, format: FlowsFormat, options: { steps?: boolean; calls?: boolean } = {}): string {
-  if (format === 'json') return JSON.stringify(result, null, 2);
+  if (format === 'json') {
+    const { io, ...rest } = result;
+    return JSON.stringify(io ? { ...rest, ...screenIOJson(io) } : rest, null, 2);
+  }
   if (format === 'mermaid') return mermaid(result);
   if (format === 'markdown') return markdown(result);
   if (format === 'pretty') return options.steps ? text(result) : summaryText(result);
@@ -32,9 +36,10 @@ export function formatFlows(result: ScreenFlows, format: FlowsFormat, options: {
 function dataView(result: ScreenFlows): string {
   const view = result.view;
   const screen = (text: string) => text.split(`${view.name}.`).join('').replaceAll(`${view.name}#`, '#');
-  const lines = [`${view.name} [${view.kind}] ${view.file}:${view.line}`];
+  const flows = withoutOutput(result);
+  const lines = [`${view.name} [${view.kind}] ${view.file}:${view.line}`, ...ioBlock(result), '', `FLOWS (${flows.length})`];
   const empty: string[] = [];
-  for (const flow of result.flows) {
+  for (const flow of flows) {
     const id = flow.id.startsWith(`${view.name}/`) ? flow.id.slice(view.name.length + 1) : flow.id;
     const data = flow.summary.data;
     if (data.length === 0) {
@@ -66,8 +71,9 @@ function dataView(result: ScreenFlows): string {
 function leanSummary(result: ScreenFlows): string {
   const view = result.view;
   const screen = (text: string) => text.split(`${view.name}.`).join('').replaceAll(`${view.name}#`, '#');
-  const lines = [`${view.name} [${view.kind}] ${view.file}:${view.line}`];
-  for (const flow of result.flows) {
+  const flows = withoutOutput(result);
+  const lines = [`${view.name} [${view.kind}] ${view.file}:${view.line}`, ...ioBlock(result), '', `FLOWS (${flows.length})`];
+  for (const flow of flows) {
     const summary = flow.summary;
     const id = flow.id.startsWith(`${view.name}/`) ? flow.id.slice(view.name.length + 1) : flow.id;
     lines.push('', `${id} ${flow.kind} ${screen(flow.title)} ${where(flow.at)}`);
@@ -115,8 +121,13 @@ function leanSummary(result: ScreenFlows): string {
 
 function summaryText(result: ScreenFlows, compact = false): string {
   const view = result.view;
-  const lines = [`${view.name}  [${view.kind}${view.layer ? `, layer ${view.layer}` : ''}]  ${view.file}:${view.line}`];
-  for (const flow of result.flows) {
+  const lines = [
+    `${view.name}  [${view.kind}${view.layer ? `, layer ${view.layer}` : ''}]  ${view.file}:${view.line}`,
+    ...ioBlock(result, true),
+  ];
+  const flows = withoutOutput(result);
+  lines.push('', `FLOWS (${flows.length})`);
+  for (const flow of flows) {
     const summary = flow.summary;
     lines.push('', `${flow.id}  ${flow.kind}  ${flow.title}  ${where(flow.at)}`);
     const rows: { head: string; text: string; at?: string }[] = [];
@@ -204,7 +215,7 @@ function flowLines(flow: ScreenFlow): { number: string; layer: string; text: str
   const rows: { number: string; layer: string; text: string; at: string }[] = [];
   let number = 0;
   for (const step of flow.steps) {
-    const numbered = step.kind === 'call' || step.kind === 'source';
+    const numbered = step.kind === 'call' || step.kind === 'source' || step.kind === 'navigation';
     if (numbered) number++;
     rows.push({
       number: numbered ? String(number) : '',
@@ -231,7 +242,8 @@ function itemRange(ids: string[]): string {
 
 function text(result: ScreenFlows): string {
   const view = result.view;
-  const lines = [`${view.name}  [${view.kind}${view.layer ? `, layer ${view.layer}` : ''}]  ${view.file}:${view.line}`];
+  const lines = [`${view.name}  [${view.kind}${view.layer ? `, layer ${view.layer}` : ''}]  ${view.file}:${view.line}`, ...ioBlock(result)];
+  if (result.io) lines.push('');
   lines.push(`FLOWS (${result.flows.length})`);
   const width = Math.max(0, ...result.flows.map((flow) => flow.id.length));
   const kindWidth = Math.max(0, ...result.flows.map((flow) => flow.kind.length));
@@ -260,8 +272,23 @@ function text(result: ScreenFlows): string {
 
 function markdown(result: ScreenFlows): string {
   const lines = [`# ${result.view.name} flows`, ''];
+  const io = result.io;
+  if (io) {
+    const indented = (block: string[]) => block.slice(1).map((line) => `    ${line}`);
+    lines.push(
+      '## Input',
+      '',
+      ...(io.inputs.length + io.callers.length > 0 ? indented(screenInputLines(io, result.view, true)) : ['none']),
+      '',
+      '## Output',
+      '',
+      ...(io.outputs.length > 0 ? indented(screenOutputLines(io, result.view, true)) : ['none']),
+      '',
+    );
+  }
+  lines.push(`## Flows (${result.flows.length})`, '');
   for (const flow of result.flows) {
-    lines.push(`## ${flow.id} ${flow.kind}: ${flow.title}`, '', '| # | layer | step | where |', '|---|---|---|---|');
+    lines.push(`### ${flow.id} ${flow.kind}: ${flow.title}`, '', '| # | layer | step | where |', '|---|---|---|---|');
     for (const row of flowLines(flow)) {
       lines.push(
         `| ${row.number} | ${row.layer} | ${row.text.replace(/^( +)/, (spaces) => '&nbsp;'.repeat(spaces.length)).replace(/\|/g, '\\|')} | \`${row.at}\` |`,
@@ -272,6 +299,31 @@ function markdown(result: ScreenFlows): string {
     lines.push('');
   }
   return lines.join('\n');
+}
+
+/** INPUT and OUTPUT, after the screen's line; nothing for one flow (`--entry`). */
+function ioBlock(result: ScreenFlows, pretty = false): string[] {
+  const io = result.io;
+  return io ? ['', ...screenInputLines(io, result.view, pretty), '', ...screenOutputLines(io, result.view, pretty)] : [];
+}
+
+/**
+ * The flows without what OUTPUT already lists: the push and modal steps, and
+ * the flows that only show another screen. Unchanged without OUTPUT (`--entry`).
+ */
+function withoutOutput(result: ScreenFlows): ScreenFlow[] {
+  if (!result.io) return result.flows;
+  const flows: ScreenFlow[] = [];
+  for (const flow of result.flows) {
+    const steps = flow.summary.steps.filter((step) => step.layer !== 'navigation');
+    const data = flow.summary.data.filter((step) => step.kind !== 'navigation').map((step, index) => ({ ...step, number: index + 1 }));
+    const navigates = steps.length < flow.summary.steps.length;
+    // Left with only its entry (the tap handler, the method itself): the flow just shows another screen.
+    const bare = steps.every((step) => step.depth === 0 && [...step.success, ...step.failure, ...step.writes].length === 0);
+    if (navigates && data.length === 0 && bare) continue;
+    flows.push(navigates ? { ...flow, summary: { ...flow.summary, steps, data } } : flow);
+  }
+  return flows;
 }
 
 /** One sequence diagram per flow; participants are the architecture layers. */

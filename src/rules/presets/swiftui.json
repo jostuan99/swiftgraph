@@ -316,6 +316,92 @@
       }
     }
   ],
+  "navigation": [
+    {
+      "id": "swiftui.navigation-link",
+      "call": "NavigationLink(_:destination:label:)",
+      "destination": ["destination"]
+    },
+    {
+      "id": "swiftui.navigation-destination-for",
+      "call": "*.navigationDestination(for:destination:)",
+      "destination": ["destination"]
+    },
+    {
+      "id": "swiftui.navigation-destination-presented",
+      "call": "*.navigationDestination(isPresented:destination:)",
+      "destination": ["destination"]
+    },
+    {
+      "id": "swiftui.navigation-destination-item",
+      "call": "*.navigationDestination(item:destination:)",
+      "destination": ["destination"]
+    },
+    {
+      "id": "swiftui.sheet",
+      "call": "*.sheet(isPresented:onDismiss:content:)",
+      "destination": ["content"],
+      "transition": "modal"
+    },
+    {
+      "id": "swiftui.sheet-item",
+      "call": "*.sheet(item:onDismiss:content:)",
+      "destination": ["content"],
+      "transition": "modal"
+    },
+    {
+      "id": "swiftui.full-screen-cover",
+      "call": "*.fullScreenCover(isPresented:onDismiss:content:)",
+      "destination": ["content"],
+      "transition": "modal"
+    },
+    {
+      "id": "swiftui.full-screen-cover-item",
+      "call": "*.fullScreenCover(item:onDismiss:content:)",
+      "destination": ["content"],
+      "transition": "modal"
+    },
+    {
+      "id": "swiftui.popover",
+      "call": "*.popover(isPresented:attachmentAnchor:arrowEdge:content:)",
+      "destination": ["content"],
+      "transition": "modal"
+    },
+    {
+      "id": "swiftui.popover-item",
+      "call": "*.popover(item:attachmentAnchor:arrowEdge:content:)",
+      "destination": ["content"],
+      "transition": "modal"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "swiftui.state",
+      "kind": "state",
+      "attribute": [
+        "State",
+        "StateObject",
+        "FocusState",
+        "GestureState",
+        "Namespace",
+        "AppStorage",
+        "SceneStorage",
+        "FetchRequest",
+        "Query"
+      ],
+      "ignore": true
+    },
+    {
+      "id": "swiftui.binding",
+      "kind": "binding",
+      "attribute": "Binding"
+    },
+    {
+      "id": "swiftui.environment",
+      "kind": "environment",
+      "attribute": ["Environment", "EnvironmentObject"]
+    }
+  ],
   "flowThrough": [
     {
       "id": "swiftui.list",

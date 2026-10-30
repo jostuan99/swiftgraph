@@ -1,22 +1,23 @@
 LoginView [SwiftUI View] @SampleArchitecture/LoginView.swift:7
 # vm = LoginViewModel
   state: @ObservedObject vm: LoginViewModel = LoginViewModel() @LoginView.swift:8
-  children: none
+  children: DetailView (navigation push); DetailView (navigation modal)
 
-ITEMS (6)
+ITEMS (7)
  id | line | kind | dir | when | datasource
- #1 | :15 | TextField | input | vm.state == .login | vm.firstName; placeholder localization "First Name" (missing en, ja)
- #2 | :17 | TextField | input | vm.state == .login | vm.lastName; placeholder localization "Last Name" (missing en, ja)
- #3 | :20 | TextField | input | vm.state == .login | vm.phoneNumber; placeholder localization "Phone Number" (missing en, ja)
- #4 | :22 | TextField | input | vm.state == .login | vm.customerNumber; placeholder localization "Customer Number" (missing en, ja)
- #5 | :24 | Button | action | vm.state == .login | localization "Login"
- #6 | :33 | Text | display | !(vm.state == .login) | localization "Hello, user"
+ #1 | :14 | TextField | input | | vm.firstName; placeholder localized "名"
+ #2 | :16 | TextField | input | | vm.lastName; placeholder localized "姓"
+ #3 | :19 | TextField | input | | vm.phoneNumber; placeholder localized "電話番号"
+ #4 | :22 | TextField | input | | vm.customerNumber; placeholder localized "お客様番号"
+ #5 | :24 | Button | action | | localized "ログイン"
+ #6 | :31 | Text | display | | localized missing
+ #7 | :36 | Text | display | | localized missing
 
 SUMMARY
- api JSONDecoder.decode → AnonymousSession
+ api none
  local none
  file none
- localization Localizable: 6 keys (6 missing in en, 6 missing in ja)
+ localized Localizable (default ja): 7 keys (2 missing in en, 2 missing in ja)
  input firstName: String, lastName: String, phoneNumber: String, customerNumber: String (4 not read elsewhere)
  unresolved none
 

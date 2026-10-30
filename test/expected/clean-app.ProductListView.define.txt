@@ -1,20 +1,21 @@
 ProductListView [SwiftUI View] @Sources/CleanApp/Presentation/ProductListView.swift:3
 # api = https://api.example.com
   state: @StateObject viewModel = AppContainer.shared.makeProductListViewModel() @ProductListView.swift:4
-  children: ProductRow (row of List)
+  children: ProfileView (navigation push); ProductRow (row of List)
 
-ITEMS (4)
+ITEMS (5)
  id | line | kind | dir | when | datasource
- #1 | :11 | navigationTitle | display | | localization "products.title"
+ #1 | :11 | navigationTitle | display | | localized "Products"
  #2 | :8 | List | list | | GET /v1/products items
- ProductRow#1 (in #2) | :24 | Text | display | | GET /v1/products items[].product_name
- ProductRow#2 (in #2) | :26 | Text | display | | GET /v1/products items[].price
+ #3 | :17 | Text | display | | localized "Profile"
+ ProductRow#1 (in #2) | :29 | Text | display | | GET /v1/products items[].product_name
+ ProductRow#2 (in #2) | :31 | Text | display | | GET /v1/products items[].price
 
 SUMMARY
  api GET /v1/products ProductListResponse items: [ProductDTO], items[].product_name: String, items[].price: Decimal
  local none
  file JSONDecoder.decode → [ProductDTO] [].name: String, [].price: Decimal; "FileManager.default.temporaryDirectory.appendingPathComponent(\"products.json\")" Data(contentsOf:) → Data
- localization Localizable: 1 key (1 missing in ja)
+ localized Localizable (default en): 2 keys (1 missing in ja)
  unresolved none
 
 More: --detail (DATA, CONDITIONS) or --item <id>

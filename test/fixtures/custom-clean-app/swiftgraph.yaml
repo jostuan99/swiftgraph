@@ -1,0 +1,3 @@
+# `Localization.loginFirstName.localized`: the raw value of the case is the key.
+sources:
+  - { id: app.localization, kind: localization, member: Localization.localized, keyFrom: rawValue, default: ja }

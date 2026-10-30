@@ -55,11 +55,26 @@ export const DATASOURCE_PRIORITY = ['api', 'userDefaults', 'file', 'coreData', '
  * The one source of an item's data: stored or remote data first (in
  * `DATASOURCE_PRIORITY` order), then the view-model variable the view reads,
  * then a localized string, then a literal. `api ProductListResponse.items[].name`,
- * `ProductListViewModel.title`, `localization "Login"`. Empty when the item shows no data.
+ * `ProductListViewModel.title`, `localized "Login"`. Empty when the item shows no data.
  */
-export function datasource(item: ScreenItem): string {
+/** Where a passed value comes from, the same way as an item's datasource. */
+export function valueSource(traced: Traced[]): string {
   const candidates: { rank: number; text: string }[] = [];
-  const consider = (traced: Traced) => {
+  traced.forEach(sourceCandidates(candidates));
+  return bestCandidate(candidates);
+}
+
+function bestCandidate(candidates: { rank: number; text: string }[]): string {
+  return (
+    candidates.reduce<{ rank: number; text: string } | undefined>(
+      (chosen, candidate) => (!chosen || candidate.rank < chosen.rank ? candidate : chosen),
+      undefined,
+    )?.text ?? ''
+  );
+}
+
+function sourceCandidates(candidates: { rank: number; text: string }[]): (traced: Traced) => void {
+  const consider = (traced: Traced): void => {
     const origin = traced.origin;
     if (origin.kind === 'derived') return origin.inputs.forEach(consider);
     if (origin.kind === 'error') {
@@ -77,6 +92,12 @@ export function datasource(item: ScreenItem): string {
     else if (origin.kind === 'localization') candidates.push({ rank: 11, text: shortSources(traced)[0]! });
     else if (origin.kind !== 'unresolved') candidates.push({ rank: 12, text: shortSources(traced)[0]! });
   };
+  return consider;
+}
+
+export function datasource(item: ScreenItem): string {
+  const candidates: { rank: number; text: string }[] = [];
+  const consider = sourceCandidates(candidates);
   for (const data of item.data) {
     if (data.action) continue;
     if (data.input) {
@@ -86,11 +107,7 @@ export function datasource(item: ScreenItem): string {
     }
     data.traced.forEach(consider);
   }
-  const best = candidates.reduce<{ rank: number; text: string } | undefined>(
-    (chosen, candidate) => (!chosen || candidate.rank < chosen.rank ? candidate : chosen),
-    undefined,
-  );
-  // An input's placeholder (or prompt) text, when localized: key, translations and missing languages.
+  // An input's placeholder (or prompt) text, when localized: the text in the default language.
   const placeholders = item.data
     .filter((data) => data.role === 'placeholder' || data.role === 'prompt')
     .flatMap((data) => data.traced.map((traced) => ({ role: data.role, traced })))
@@ -101,19 +118,45 @@ export function datasource(item: ScreenItem): string {
   const described = placeholders.map((text) =>
     prompted ? text.replace(/^placeholder /, 'label ').replace(/^prompt /, 'placeholder ') : text,
   );
-  let main = best?.text ?? '';
-  if (main.startsWith('localization ') && described.some((text) => text.includes(main))) main = '';
+  let main = bestCandidate(candidates);
+  if (main.startsWith('localized ') && described.some((text) => text.includes(main))) main = '';
   return [main, ...described].filter((text) => text !== '').join('; ');
 }
 
-/** `localization "First Name" (en "First name", missing ja)`. */
 function localizationText(traced: Traced): string {
   const origin = traced.origin;
-  if (origin.kind !== 'localization') return shortSources(traced)[0] ?? '';
-  const values = origin.values.filter((entry) => entry.value !== null).map((entry) => `${entry.language} ${quote(entry.value!)}`);
-  const missing = origin.missing.length > 0 ? [`missing ${origin.missing.join(', ')}`] : [];
-  const details = [...values, ...missing];
-  return `localization ${quote(origin.key)}${details.length > 0 ? ` (${details.join(', ')})` : ''}`;
+  return origin.kind === 'localization' ? localizedText(origin) : (shortSources(traced)[0] ?? '');
+}
+
+type LocalizationOrigin = Extract<Traced['origin'], { kind: 'localization' }>;
+
+/**
+ * `localized "First Name"`: the text in the default language; `localized missing`
+ * when the default language has none (the app then shows the key). The key and
+ * the other languages are in DATA (`--detail`) and JSON.
+ */
+export function localizedText(origin: LocalizationOrigin): string {
+  const text = origin.values.find((entry) => entry.language === origin.defaultLanguage)?.value;
+  return text === undefined || text === null ? 'localized missing' : `localized ${quote(text)}`;
+}
+
+/** What the app shows in the default language: the translation, else the key. */
+export function shownText(origin: LocalizationOrigin): string {
+  return origin.values.find((entry) => entry.language === origin.defaultLanguage)?.value ?? origin.key;
+}
+
+/**
+ * Translations, the default language first and marked (`default ja "名"`), then
+ * the languages without one; a key missing in the default language shows as itself.
+ */
+function translationTexts(origin: LocalizationOrigin): string[] {
+  const values = origin.values
+    .filter((entry) => entry.value !== null)
+    .map((entry) => `${entry.language === origin.defaultLanguage ? 'default ' : ''}${entry.language} ${quote(entry.value!)}`);
+  const missing = [...origin.missing]
+    .sort((a, b) => Number(b === origin.defaultLanguage) - Number(a === origin.defaultLanguage))
+    .map((language) => (language === origin.defaultLanguage ? `default ${language}` : language));
+  return [...values, ...(missing.length > 0 ? [`missing ${missing.join(', ')}`] : [])];
 }
 
 /** The property the view reads: the nearest one in the ViewModel layer, else the nearest property. */
@@ -123,7 +166,7 @@ export function viewModelVariable(traced: Traced): string {
   return (viewModel ?? properties.filter((step) => step.layer !== 'View').at(-1))?.symbol ?? '';
 }
 
-/** `api ProductListResponse.items[].name`, `userDefaults "lastUpdated"`, `localization "Login"`. */
+/** `api ProductListResponse.items[].name`, `userDefaults "lastUpdated"`, `localized "Login"`. */
 export function shortSources(traced: Traced): string[] {
   const origin = traced.origin;
   switch (origin.kind) {
@@ -142,7 +185,7 @@ export function shortSources(traced: Traced): string[] {
       return [`${kind} ${value}`];
     }
     case 'localization':
-      return [`localization ${quote(origin.key)}`];
+      return [localizedText(origin)];
     case 'literal':
       return [`literal ${origin.type === 'String' ? quote(origin.value) : origin.value}`];
     case 'case':
@@ -174,12 +217,8 @@ export function describeOrigin(traced: Traced): string {
     case 'case':
       return `enum ${origin.type ? `${origin.type}` : ''}.${origin.name}`;
     case 'localization': {
-      const values = origin.values
-        .filter((entry) => entry.value !== null)
-        .map((entry) => `${entry.language} ${quote(entry.value!)}`)
-        .join(', ');
-      const missing = origin.missing.length > 0 ? `missing: ${origin.missing.join(', ')}` : '';
-      return `localization  ${origin.table} ${quote(origin.key)}${values ? `  ${values}` : ''}${missing ? `  ${missing}` : ''}`;
+      const details = translationTexts(origin);
+      return `localized  ${origin.table} ${quote(origin.key)}${details.length > 0 ? `  ${details.join(', ')}` : ''}`;
     }
     case 'source': {
       const typeName = origin.type ? tyText(origin.type) : '?';
@@ -289,10 +328,11 @@ function text(definition: ScreenDefinition, options: FormatOptions): string {
     const rendered = state.render('');
     lines.push(`  state:     ${rendered[0]}`, ...rendered.slice(1).map((line) => `             ${line}`));
   }
+  const children = definition.children;
   lines.push(
     compactMode
-      ? `  children: ${definition.children.length === 0 ? 'none' : definition.children.map((child) => `${child.name} (${child.how.replaceAll(`${view.name}#`, '#')})`).join('; ')}`
-      : `  children:  ${definition.children.length === 0 ? 'none' : definition.children.map((child) => `${child.name} (${child.how}, ${where(child.at)})`).join('; ')}`,
+      ? `  children: ${children.length === 0 ? 'none' : children.map((child) => `${child.name} (${childHow(child).replaceAll(`${view.name}#`, '#')})`).join('; ')}`
+      : `  children:  ${children.length === 0 ? 'none' : children.map((child) => `${child.name} (${childHow(child)}, ${where(child.at)})`).join('; ')}`,
   );
 
   lines.push('', `ITEMS (${definition.items.length})`);
@@ -435,14 +475,16 @@ function summary(definition: ScreenDefinition): string[] {
     if (!groups.has(group)) groups.set(group, new Set());
     groups.get(group)!.add(value);
   };
-  const localization = new Map<string, { keys: Set<string>; missing: Map<string, number> }>();
+  type TableUse = { keys: Set<string>; missing: Map<string, number>; defaultLanguage?: string };
+  const localization = new Map<string, TableUse>();
   const inputs: { name: string; read: boolean }[] = [];
   const fieldGroups = new Map<string, Set<string>>();
   const visit = (traced: Traced) => {
     const group = sourceGroup(traced);
     const origin = traced.origin;
     if (origin.kind === 'localization') {
-      const table = localization.get(origin.table) ?? { keys: new Set(), missing: new Map() };
+      const table: TableUse = localization.get(origin.table) ?? { keys: new Set(), missing: new Map() };
+      table.defaultLanguage ??= origin.defaultLanguage;
       if (!table.keys.has(origin.key))
         for (const language of origin.missing) table.missing.set(language, (table.missing.get(language) ?? 0) + 1);
       table.keys.add(origin.key);
@@ -494,11 +536,12 @@ function summary(definition: ScreenDefinition): string[] {
   for (const [group, values] of groups)
     if (!['api', 'local', 'file', 'unresolved'].includes(group)) lines.add([group, [...values].join('; ')]);
   lines.add([
-    'localization',
+    'localized',
     [...localization.entries()]
       .map(([table, entry]) => {
         const missing = [...entry.missing.entries()].map(([language, count]) => `${count} missing in ${language}`).join(', ');
-        return `${table}: ${entry.keys.size} key${entry.keys.size === 1 ? '' : 's'}${missing ? ` (${missing})` : ''}`;
+        const language = entry.defaultLanguage ? ` (default ${entry.defaultLanguage})` : '';
+        return `${table}${language}: ${entry.keys.size} key${entry.keys.size === 1 ? '' : 's'}${missing ? ` (${missing})` : ''}`;
       })
       .join('; ') || 'none',
   ]);
@@ -573,6 +616,8 @@ function originJson(traced: Traced): Record<string, unknown> {
     case 'localization':
       result.table = origin.table;
       result.key = origin.key;
+      result.value = shownText(origin);
+      if (origin.defaultLanguage) result.defaultLanguage = origin.defaultLanguage;
       result.missing = origin.missing;
       result.values = origin.values;
       break;
@@ -615,7 +660,7 @@ function originJson(traced: Traced): Record<string, unknown> {
   return result;
 }
 
-function tracedJson(traced: Traced): Record<string, unknown> {
+export function tracedJson(traced: Traced): Record<string, unknown> {
   const result: Record<string, unknown> = { source: originJson(traced) };
   if (traced.steps.length > 0) {
     result.steps = [...traced.steps].reverse().map((step) => {
@@ -675,4 +720,9 @@ function definitionJson(definition: ScreenDefinition): Record<string, unknown> {
       })),
     })),
   };
+}
+
+/** `navigation push`, `subview`, `cell of #3`. */
+function childHow(child: ScreenDefinition['children'][number]): string {
+  return child.transition ? `${child.how} ${child.transition}` : child.how;
 }

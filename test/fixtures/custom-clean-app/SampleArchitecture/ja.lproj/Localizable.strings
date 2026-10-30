@@ -5,3 +5,9 @@
   Created by JosSteve on 26/10/26.
   
 */
+
+"loginFirstName" = "名";
+"loginLastName" = "姓";
+"loginPhoneNumber" = "電話番号";
+"loginCustomerNumber" = "お客様番号";
+"loginButton" = "ログイン";

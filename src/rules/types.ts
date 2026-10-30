@@ -46,6 +46,11 @@ export interface SourceRule extends RuleBase {
   kind: string;
   /** `Type.selector`: `JSONDecoder.decode(_:from:)`, `*.serializingDecodable(_:)`. `Type` may be `*`. */
   call?: string;
+  /**
+   * A member read on a value: `Localization.localized` (a property of an enum
+   * whose cases are localization keys). `Type` may be a protocol or `*`.
+   */
+  member?: string;
   /** A property attribute: `AppStorage`. */
   attribute?: string;
   /**
@@ -55,6 +60,15 @@ export interface SourceRule extends RuleBase {
   type?: ArgumentRef | { fixed: string };
   /** Argument holding the key, path or table name. */
   key?: ArgumentRef;
+  /**
+   * The key is on the value the `member` or `call` is read on, not in an
+   * argument: `rawValue` (raw value of an enum case, else its name), `case`
+   * (name of the enum case), `self` (the string itself: `"login.title".localized`),
+   * or a property of the value (`key`: `LocalizedKey(key: "login.title").text`).
+   */
+  keyFrom?: string;
+  /** Strings table of a `localization` source (default `Localizable`). */
+  table?: string;
   /** Argument holding the raw data the value is made from (`decode(_:from:)`). */
   input?: ArgumentRef;
   /**
@@ -104,6 +118,55 @@ export interface ItemViewRule extends RuleBase {
   match?: TypeMatch;
   /** Views created in the closure of these calls: `List`, `ForEach`. */
   closureOf?: string[];
+}
+
+/** A call that shows another screen: what its destination argument creates is not part of this screen. */
+export interface NavigationRule extends RuleBase {
+  /** `NavigationLink(_:destination:label:)`; `*.pushViewController(_:animated:)`. */
+  call: string;
+  /** Arguments holding the destination (labels or positions). */
+  destination: ArgumentRef[];
+  /** How the screen is shown: `push` (default), `modal`, or a project transition (`replace`, `tab`). */
+  transition?: string;
+  /**
+   * The screen shown, when no argument creates it: a coordinator method
+   * (`AppRouter.showDetail(id:)` → `DetailView`). The call's arguments are the values passed.
+   */
+  to?: string;
+}
+
+/**
+ * How a screen receives data: what `flows` prints under INPUT. Rules are tried
+ * in order (the project's first); the first that matches a member decides.
+ */
+export interface InputRule extends RuleBase {
+  /** Printed in the `how` column: `init`, `memberwise`, `binding`, `environment`, `configure`, or a project kind. */
+  kind: string;
+  /** Parameters of initializers with this selector (glob): `init(*`, `init(viewModel:)`. */
+  initializer?: string;
+  /** Parameters of methods with this selector (glob) that creators call after creating the screen: `configure(with:)`. */
+  method?: string;
+  /** Properties with this wrapper, without `@`: `Binding`, `Environment`, `Injected`. */
+  attribute?: string | string[];
+  /** Stored properties of a struct without an initializer (Swift's memberwise initializer). */
+  memberwise?: boolean;
+  /** Not an input: a value the screen owns (`@State`) or an initializer the framework calls (`init(coder:)`). */
+  ignore?: boolean;
+  /** Only screens matching. */
+  match?: TypeMatch;
+}
+
+/**
+ * Localization of the project: the default (development) language, shown when
+ * the user's language has no translation. It replaces the language found in
+ * `Package.swift` (`defaultLocalization`) or `project.pbxproj` (`developmentRegion`).
+ */
+export interface LocalizationRule extends RuleBase {
+  defaultLanguage: string;
+  /** Modules it applies to (globs); every module when absent. */
+  module?: string | string[];
+  /** Strings tables it applies to (globs); every table when absent. */
+  table?: string | string[];
 }
 
 export interface ClosureFlow {
@@ -176,13 +239,28 @@ export interface RuleFile {
   sources?: SourceRule[];
   sinks?: SinkRule[];
   itemViews?: ItemViewRule[];
+  navigation?: NavigationRule[];
+  inputs?: InputRule[];
+  localization?: LocalizationRule[];
   flowThrough?: FlowThroughRule[];
   injection?: InjectionRule[];
   mappers?: MapperRule[];
   entryPoints?: EntryPointRule[];
 }
 
-export const RULE_KINDS = ['layers', 'sources', 'sinks', 'itemViews', 'flowThrough', 'injection', 'mappers', 'entryPoints'] as const;
+export const RULE_KINDS = [
+  'layers',
+  'sources',
+  'sinks',
+  'itemViews',
+  'navigation',
+  'inputs',
+  'localization',
+  'flowThrough',
+  'injection',
+  'mappers',
+  'entryPoints',
+] as const;
 
 export type RuleKind = (typeof RULE_KINDS)[number];
 
@@ -198,6 +276,9 @@ export interface RuleSet {
   sources: Loaded<SourceRule>[];
   sinks: Loaded<SinkRule>[];
   itemViews: Loaded<ItemViewRule>[];
+  navigation: Loaded<NavigationRule>[];
+  inputs: Loaded<InputRule>[];
+  localization: Loaded<LocalizationRule>[];
   flowThrough: Loaded<FlowThroughRule>[];
   injection: Loaded<InjectionRule>[];
   mappers: Loaded<MapperRule>[];

@@ -8,6 +8,8 @@ export interface LocalizationFile {
   path: string;
   module: string;
   facts: LocalizationFacts;
+  /** Default language of the module (`defaultLocalization`, `developmentRegion`). */
+  defaultLanguage?: string;
 }
 
 export interface TranslationRecord {
@@ -94,7 +96,9 @@ export function buildLocalization(files: LocalizationFile[]): LocalizationPayloa
       tables.set(id, table);
     }
     table.files.push(file.path);
+    // A String Catalog's source language, else the module's default language.
     if (facts.sourceLanguage) table.sourceLanguage = facts.sourceLanguage;
+    else if (!table.sourceLanguage && file.defaultLanguage) table.sourceLanguage = file.defaultLanguage;
     for (const warning of facts.warnings) {
       issues.push({
         kind: warning.kind,
@@ -135,7 +139,7 @@ export function buildLocalization(files: LocalizationFile[]): LocalizationPayloa
     }
   }
 
-  // Source language of tables without a String Catalog: English, else Base, else the first one.
+  // Source language of tables without a String Catalog or a default language: English, else Base, else the first one.
   for (const table of tables.values()) {
     if (table.sourceLanguage) continue;
     const languages = new Set([...table.strings.values()].flatMap((record) => record.translations.map((t) => t.language)));

@@ -91,7 +91,8 @@ export interface ScreenCondition {
 export interface ScreenDefinition {
   view: ScreenView;
   state: ScreenState[];
-  children: { name: string; how: string; at: Location }[];
+  /** `how`: `subview`, `cell of #n`, `row of List`, `navigation` (with `transition`). */
+  children: { name: string; how: string; transition?: string; at: Location }[];
   items: ScreenItem[];
   conditions: ScreenCondition[];
 }
@@ -185,7 +186,13 @@ class Definer {
     };
     this.collect(type, undefined);
     const conditions = this.conditions();
-    return { view, state: this.state(type), children: this.children, items: this.filtered(), conditions };
+    return {
+      view,
+      state: this.state(type),
+      children: this.children,
+      items: this.filtered(),
+      conditions,
+    };
   }
 
   private filtered(): ScreenItem[] {
@@ -290,7 +297,11 @@ class Definer {
         }
         if (!site.receiver && isTypeName(site.name)) {
           const child = engine.resolveType(site.name, frame).info;
-          if (child && child !== type && viewKind(engine, child)) childViews.push({ type: child, frame, site, call });
+          if (!child || child === type || !viewKind(engine, child)) continue;
+          // A view shown by NavigationLink, sheet, … is another screen.
+          if (engine.inDestination(frame, call))
+            this.navigatesTo(child, { file: frame.file.path, line: site.line }, engine.enclosingNavigation(frame, call)?.transition);
+          else childViews.push({ type: child, frame, site, call });
         }
       }
       // A view passed as an argument of another sink (`prompt: Text("…")`) is part of that item.
@@ -374,6 +385,13 @@ class Definer {
       if (ancestor.closure !== null && names.includes(site.name)) return ancestor.call;
     }
     return undefined;
+  }
+
+  /** Records a screen this one navigates to; its items are not collected. */
+  private navigatesTo(type: TypeInfo, at: Location, transition: string | undefined): void {
+    if (this.options.children === false) return;
+    if (this.children.some((child) => child.name === type.path && child.how === 'navigation' && child.transition === transition)) return;
+    this.children.push({ name: type.path, how: 'navigation', ...(transition ? { transition } : {}), at });
   }
 
   /** Containers of a call, innermost first: the call and, when through a closure, the closure. */
@@ -676,6 +694,22 @@ class Definer {
       }
     }
     if (this.options.children === false) return;
+    // Views and view controllers pushed or presented are other screens.
+    const destinations = new Map<TypeInfo, string>();
+    for (const info of this.members(type)) {
+      const frame = engine.frameOf(info);
+      if (!frame) continue;
+      for (const [call, site] of frame.file.facts.flow.calls.entries()) {
+        if (site.from !== info.declaration.localId) continue;
+        const navigation = engine.navigation(site, frame, call);
+        if (!navigation) continue;
+        for (const shown of engine.shownBy(navigation, site, frame)) {
+          if (!destinations.has(shown.type)) destinations.set(shown.type, navigation.transition);
+          // A screen named by a rule (`to`) is not referenced by the screen's code.
+          if (shown.fixed && !childTypes.has(shown.type)) childTypes.set(shown.type, { file: frame.file.path, line: site.line });
+        }
+      }
+    }
     // Cells and custom views referenced by the screen.
     for (const info of this.members(type)) {
       for (const edge of engine.graph.outgoing(info.id, ['REFERENCES', 'INSTANTIATES'])) {
@@ -687,6 +721,11 @@ class Definer {
     }
     for (const [child, at] of childTypes) {
       if (this.visited.has(child)) continue;
+      // A view controller referenced by another is a screen of its own.
+      if (destinations.has(child) || viewKind(engine, child) === 'UIViewController') {
+        this.navigatesTo(child, at, destinations.get(child));
+        continue;
+      }
       const isItemView = engine.rules.itemViews.some((rule) => rule.match && engine.matchesType(child, rule.match));
       const list = this.items.find((item) => item.owner === type.path && item.direction === 'list');
       this.children.push({ name: child.path, how: isItemView ? `cell${list ? ` of ${list.id}` : ''}` : 'subview', at });

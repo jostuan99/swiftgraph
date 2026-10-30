@@ -1,16 +1,18 @@
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { build } from '../src/build.ts';
-import { defineText, flowsText } from '../src/flow/commands.ts';
+import { defineText, flowsText, rulesText } from '../src/flow/commands.ts';
 import { defineScreen } from '../src/flow/define.ts';
 import { FlowEngine } from '../src/flow/engine.ts';
-import { datasource } from '../src/flow/format-define.ts';
+import { datasource, valueSource } from '../src/flow/format-define.ts';
 import { screenFlows } from '../src/flow/flows.ts';
+import { loadRules } from '../src/rules/load.ts';
+import { parse as parseYaml } from 'yaml';
 import { databasePath, openDatabase } from '../src/store/db.ts';
-import { temporaryDirectory } from './helpers.ts';
+import { copyFixture, temporaryDirectory } from './helpers.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(HERE, 'fixtures', 'clean-app');
@@ -28,7 +30,7 @@ test('define: items of SwiftUI and UIKit screens and the sources of their data',
   const { path, cleanup } = temporaryDirectory();
   try {
     const root = join(path, 'clean-app');
-    cpSync(FIXTURE, root, { recursive: true });
+    copyFixture(FIXTURE, root);
     await build(root, { workers: 1 });
     const db = openDatabase(databasePath(root), { readonly: true });
     try {
@@ -41,12 +43,65 @@ test('define: items of SwiftUI and UIKit screens and the sources of their data',
         [
           'ProductListView#1 navigationTitle',
           'ProductListView#2 List',
+          'ProductListView#3 Text',
           'ProductRow#1 Text ProductListView#2',
           'ProductRow#2 Text ProductListView#2',
         ],
       );
+      // The destination of a NavigationLink is another screen: listed, its items left out.
+      assert.deepEqual(
+        list.definition.children.map((child) => `${child.name} ${child.how}`),
+        ['ProfileView navigation', 'ProductRow row of List'],
+      );
+      // Pushed and presented screens (a view controller, a SwiftUI view in UIHostingController) too.
+      const pushing = defineScreen(engine, 'ProductListViewController');
+      assert.ok('definition' in pushing);
+      assert.deepEqual(
+        pushing.definition.children.map((child) => `${child.name} ${child.how} ${child.transition ?? ''}`.trim()),
+        ['ProductCell cell of ProductListViewController#5', 'ProfileViewController navigation push', 'ProfileView navigation modal'],
+      );
+      assert.ok(pushing.definition.items.every((item) => !item.owner.startsWith('Profile')));
+      // flows: OUTPUT, each push or modal with its trigger and condition; INPUT, what callers pass and where it comes from.
+      const pushingFlows = screenFlows(engine, 'ProductListViewController');
+      assert.ok('flows' in pushingFlows && pushingFlows.flows.io);
+      assert.deepEqual(
+        pushingFlows.flows.io.outputs.map(
+          (output) => `${output.id} ${output.transition} ${output.to} ${output.trigger} ${output.when.join(' && ')}`,
+        ),
+        [
+          'O1 push ProfileViewController tableView(_:didSelectRowAt:) indexPath.row == 0',
+          'O2 modal ProfileView tableView(_:didSelectRowAt:) !(indexPath.row == 0)',
+        ],
+      );
+      // `init(coder:)` is left out by the uikit preset.
+      assert.deepEqual(
+        pushingFlows.flows.io.inputs.map((input) => `${input.name} ${input.kind} ${input.selector} ${input.property}`),
+        ['viewModel init init(viewModel:) viewModel'],
+      );
+      const listFlows = screenFlows(engine, 'ProductListView');
+      assert.ok('flows' in listFlows && listFlows.flows.io);
+      const linked = listFlows.flows.io.outputs[0]!;
+      assert.equal(`${linked.transition} ${linked.to} ${linked.trigger}`, 'push ProfileView ProductListView#3 tap');
+      assert.equal(valueSource(linked.arguments[0]!.traced), 'GET https://api.example.com/v1/products title');
+      const profileIO = screenFlows(engine, 'ProfileView');
+      assert.ok('flows' in profileIO && profileIO.flows.io);
+      assert.deepEqual(
+        profileIO.flows.io.inputs.map((input) => `${input.name}: ${input.type} ${input.kind} = ${input.default}`),
+        ['title: String memberwise = ""'],
+      );
+      assert.deepEqual(
+        profileIO.flows.io.callers.map(
+          (caller) => `${caller.from} ${caller.transition} ${caller.arguments.map((argument) => argument.label).join(',')}`,
+        ),
+        ['ProductListView push title', 'ProductListViewController modal '],
+      );
+      // One flow (`entry`): no INPUT or OUTPUT.
+      const one = screenFlows(engine, 'ProductListViewController', { entry: 'ProductListViewController/F1' });
+      assert.ok('flows' in one && one.flows.io === undefined);
+      // define lists the screens shown as children, not INPUT or OUTPUT.
+      assert.ok(!defineText(db, root, { screen: 'ProductListViewController' }).includes('OUTPUT'));
       // A row's text: from the API (Alamofire, JSON key from CodingKeys) and from the file cache.
-      const name = items[2]!.data[0]!.traced;
+      const name = items.find((item) => item.id === 'ProductRow#1')!.data[0]!.traced;
       const api = name.find((traced) => traced.origin.kind === 'source' && traced.origin.source === 'api')!;
       assert.equal(api.origin.kind === 'source' && api.origin.endpoint, 'https://api.example.com/v1/products');
       assert.deepEqual(api.fields, ['items', '[]', 'name']);
@@ -78,7 +133,10 @@ test('define: items of SwiftUI and UIKit screens and the sources of their data',
       // ITEMS datasource: the view-model variable and the sources behind it.
       assert.equal(datasource(byKey.get('nameLabel')!), 'GET https://api.example.com/v1/products items[].product_name');
       assert.equal(datasource(byKey.get('lastUpdatedLabel')!), 'userDefaults "lastUpdated"');
-      assert.equal(datasource(items[2]!), 'GET https://api.example.com/v1/products items[].product_name');
+      assert.equal(
+        datasource(items.find((item) => item.id === 'ProductRow#1')!),
+        'GET https://api.example.com/v1/products items[].product_name',
+      );
 
       golden('ProductListView.define.txt', defineText(db, root, { screen: 'ProductListView' }) + '\n');
       golden('ProductListViewController.define.txt', defineText(db, root, { screen: 'ProductListViewController' }) + '\n');
@@ -111,7 +169,7 @@ test('define: a project rule in swiftgraph.json names a Keychain wrapper', async
   const { path, cleanup } = temporaryDirectory();
   try {
     const root = join(path, 'clean-app');
-    cpSync(FIXTURE, root, { recursive: true });
+    copyFixture(FIXTURE, root);
     await build(root, { workers: 1 });
     const db = openDatabase(databasePath(root), { readonly: true });
     try {
@@ -137,11 +195,72 @@ test('define: a project rule in swiftgraph.json names a Keychain wrapper', async
   }
 });
 
+test('flows: project rules for INPUT (an input method) and OUTPUT (a fixed screen, a project transition)', async () => {
+  const { path, cleanup } = temporaryDirectory();
+  try {
+    const root = join(path, 'clean-app');
+    copyFixture(FIXTURE, root);
+    const config = parseYaml(readFileSync(join(root, 'swiftgraph.json'), 'utf8'));
+    config.inputs = [{ id: 'app.configure', kind: 'configure', method: 'configure(with:)', match: { name: '*Cell' } }];
+    config.navigation = [
+      { id: 'app.reload', call: 'ProductListViewModel.reload()', destination: [], to: 'ProfileViewController', transition: 'replace' },
+    ];
+    writeFileSync(join(root, 'swiftgraph.json'), JSON.stringify(config));
+    await build(root, { workers: 1 });
+    const db = openDatabase(databasePath(root), { readonly: true });
+    try {
+      const engine = new FlowEngine(db, root);
+      const cell = screenFlows(engine, 'ProductCell');
+      assert.ok('flows' in cell && cell.flows.io);
+      assert.deepEqual(
+        cell.flows.io.inputs.map((input) => `${input.name}: ${input.type} ${input.kind} ${input.selector}`),
+        ['row: ProductRowViewData configure configure(with:)'],
+      );
+      assert.deepEqual(
+        cell.flows.io.callers.map(
+          (caller) => `${caller.from} ${caller.selector} ${caller.arguments.map((argument) => argument.value).join(',')}`,
+        ),
+        ['ProductListViewController configure(with:) viewModel.rows[]'],
+      );
+      const list = screenFlows(engine, 'ProductListViewController');
+      assert.ok('flows' in list && list.flows.io);
+      assert.deepEqual(
+        list.flows.io.outputs.map((output) => `${output.transition} ${output.to} ${output.trigger}`),
+        [
+          'replace ProfileViewController didTapRefresh()',
+          'push ProfileViewController tableView(_:didSelectRowAt:)',
+          'modal ProfileView tableView(_:didSelectRowAt:)',
+        ],
+      );
+      assert.ok(flowsText(db, root, { screen: 'ProductListViewController' }).includes('O1 | replace | ProfileViewController |'));
+      // rules: the rules in effect as a swiftgraph.json template; --write keeps the file's other keys.
+      const template = parseYaml(rulesText(db, root));
+      assert.match(rulesText(db, root), /^  - \{ id: swift\.init, kind: init, initializer: init\(\* \}$/m);
+      assert.deepEqual(Object.keys(template), ['extends', 'inputs', 'navigation', 'localization']);
+      // The default language found in the project, as a rule to edit.
+      assert.deepEqual(template.localization, [{ id: 'project.default-language.CleanApp', module: 'CleanApp', defaultLanguage: 'en' }]);
+      assert.equal(template.inputs[0].id, 'app.configure');
+      assert.ok(template.inputs.some((rule: { id: string }) => rule.id === 'swift.init'));
+      assert.ok(!('origin' in template.inputs[0]));
+      assert.throws(() => rulesText(db, root, ['bogus']), /unknown rule kind "bogus"/);
+      rulesText(db, root, ['inputs'], true);
+      const written = parseYaml(readFileSync(join(root, 'swiftgraph.json'), 'utf8'));
+      assert.equal(written.sources[0].id, 'app.token-read');
+      assert.equal(written.navigation[0].id, 'app.reload');
+      assert.ok(written.inputs.some((rule: { id: string }) => rule.id === 'swiftui.binding'));
+    } finally {
+      db.close();
+    }
+  } finally {
+    cleanup();
+  }
+});
+
 test('define and flows: a screen split into components and extensions in several files', async () => {
   const { path, cleanup } = temporaryDirectory();
   try {
     const root = join(path, 'clean-app');
-    cpSync(FIXTURE, root, { recursive: true });
+    copyFixture(FIXTURE, root);
     await build(root, { workers: 1 });
     const db = openDatabase(databasePath(root), { readonly: true });
     try {
@@ -153,11 +272,11 @@ test('define and flows: a screen split into components and extensions in several
         view.definition.items.map((item) => `${item.id} ${item.path.join(' > ')} | ${datasource(item)}`),
         [
           'ProfileView#1 alert | error GET https://api.example.com/v1/me',
-          'ProfileView#2 Button | localization "common.ok"',
+          'ProfileView#2 Button | localized "OK"',
           'ProfileView#3 header > HStack > Text | GET https://api.example.com/v1/me display_name',
           'ProfileView#4 settings > Toggle | userDefaults "notificationsEnabled"',
-          'ProfileView#5 settings > TextField | ProfileViewModel.nickname; label localization "profile.nickname" (en "Nickname", missing ja); placeholder localization "profile.nickname.placeholder" (en "Enter a nickname", ja "ニックネームを入力")',
-          'ProfileView#6 settings > Button | localization "profile.logout"',
+          'ProfileView#5 settings > TextField | ProfileViewModel.nickname; label localized "Nickname"; placeholder localized "Enter a nickname"',
+          'ProfileView#6 settings > Button | localized "Log out"',
           'PointsBadge#1 VStack > PointsBadge > Label | GET https://api.example.com/v1/me points',
           'AvatarView#1 header > HStack > AvatarView > AsyncImage | GET https://api.example.com/v1/me avatar_url',
         ],
@@ -173,7 +292,7 @@ test('define and flows: a screen split into components and extensions in several
       assert.ok('definition' in controllerPlaceholder);
       assert.equal(
         datasource(controllerPlaceholder.definition.items.find((item) => item.kind === 'UITextField')!),
-        'placeholder localization "profile.nickname.placeholder" (en "Enter a nickname", ja "ニックネームを入力")',
+        'placeholder localized "Enter a nickname"',
       );
       // The alert shows while `showsError` is true, with the error of the request as its message.
       assert.deepEqual(view.definition.items[0]!.shownWhen, ['viewModel.showsError']);
@@ -227,7 +346,7 @@ test('flows: entry points of a screen and their steps through the layers', async
   const { path, cleanup } = temporaryDirectory();
   try {
     const root = join(path, 'clean-app');
-    cpSync(FIXTURE, root, { recursive: true });
+    copyFixture(FIXTURE, root);
     await build(root, { workers: 1 });
     const db = openDatabase(databasePath(root), { readonly: true });
     try {
@@ -237,7 +356,11 @@ test('flows: entry points of a screen and their steps through the layers', async
       const flows = result.flows.flows;
       assert.deepEqual(
         flows.map((flow) => `${flow.id} ${flow.kind} ${flow.item ?? ''}`.trim()),
-        ['ProductListViewController/F1 action ProductListViewController#4', 'ProductListViewController/F2 lifecycle'],
+        [
+          'ProductListViewController/F1 action ProductListViewController#4',
+          'ProductListViewController/F2 lifecycle',
+          'ProductListViewController/F3 action',
+        ],
       );
       // The refresh button: Task → view model → repository and service through DI → Keychain and API.
       const action = flows[0]!.steps;
@@ -378,21 +501,43 @@ test(
     const { path, cleanup } = temporaryDirectory();
     try {
       const root = join(path, 'custom-clean-app');
-      cpSync(CUSTOM, root, { recursive: true });
+      copyFixture(CUSTOM, root);
       await build(root, { workers: 1 });
       const db = openDatabase(databasePath(root), { readonly: true });
       try {
         const engine = new FlowEngine(db, root);
         const definition = defineScreen(engine, 'LoginView');
         assert.ok('definition' in definition);
-        const state = definition.definition.conditions.find((condition) => condition.expression === 'vm.state')!;
-        const main = state.writes.find((write) => write.value === '.main')!;
-        // `.main` comes from a mapper reached through a generic receiver; the cast before it always fails.
-        assert.equal(main.symbol, 'RegisterViewModelMapper.mapping(_:)');
-        assert.ok(main.unreachable?.startsWith('cast AnonymousSession → String always fails'));
-        const decoded = main.because.find((traced) => traced.origin.kind === 'source')!;
-        assert.equal(decoded.origin.kind === 'source' && decoded.origin.api, 'JSONDecoder.decode');
-        assert.equal(decoded.origin.kind === 'source' && decoded.origin.type?.text, 'AnonymousSession');
+        // `Localization.loginFirstName.localized`: the raw value of the case is the key (rule in the fixture's swiftgraph.json).
+        const placeholder = definition.definition.items[0]!.data.find((data) => data.role === 'placeholder')!.traced[0]!.origin;
+        assert.ok(placeholder.kind === 'localization');
+        assert.equal(placeholder.key, 'loginFirstName');
+        // `developmentRegion = ja` in project.pbxproj: the default language, listed first.
+        assert.equal(placeholder.defaultLanguage, 'ja');
+        assert.equal(placeholder.values[0]!.language, 'ja');
+        assert.deepEqual(placeholder.missing, []);
+        // A router method around pushViewController/present: the transition and the screen shown, not the router's code.
+        assert.deepEqual(
+          definition.definition.children.map((child) => `${child.name} ${child.how} ${child.transition}`),
+          ['DetailView navigation push', 'DetailView navigation modal'],
+        );
+        const routed = screenFlows(engine, 'LoginView');
+        assert.ok('flows' in routed && routed.flows.io);
+        assert.deepEqual(
+          routed.flows.io.outputs.map((output) => `${output.transition} ${output.to} ${output.trigger} via ${output.via}`),
+          [
+            'push DetailView LoginView#6 .onTapGesture via BaseRoutingManager.push(_:animated:)',
+            'modal DetailView LoginView#7 .onTapGesture via BaseRoutingManager.sheet(_:animated:dismiss:)',
+          ],
+        );
+        const taps = routed.flows.flows.filter((flow) => flow.title.includes('onTapGesture'));
+        assert.deepEqual(
+          taps.map((flow) => flow.steps.map((step) => `${step.kind} ${step.text} ${step.notes.join(';')}`.trim())),
+          [
+            ['closure onTapGesture closure', 'navigation push DetailView via BaseRoutingManager.push(_:animated:)'],
+            ['closure onTapGesture closure', 'navigation modal DetailView via BaseRoutingManager.sheet(_:animated:dismiss:)'],
+          ],
+        );
 
         const flows = screenFlows(engine, 'LoginView', { entry: 'LoginView#5' });
         assert.ok('flows' in flows);
@@ -403,7 +548,7 @@ test(
 
         golden('LoginView.define.txt', defineText(db, root, { screen: 'LoginView' }) + '\n', 'custom-clean-app');
         golden('LoginView.flows.txt', flowsText(db, root, { screen: 'LoginView' }) + '\n', 'custom-clean-app');
-        // View → Repository with everything in between: the subscription that handles the response and the mapper behind the cast.
+        // View → Repository with everything in between: the subscription that handles the response, the mapper behind the cast and the register call it starts.
         const until = screenFlows(engine, 'LoginView', { entry: 'LoginView#5', until: 'Repository' });
         assert.ok('flows' in until);
         const untilSteps = until.flows.flows[0]!.summary.steps;
@@ -416,6 +561,14 @@ test(
             '4 Repository LoginRepositoryImpl.anonymousSession(_:)',
             '5 UseCase sink async',
             '6 Mapper AnonymousViewModelMapper.mapping(_:)',
+            '7 ViewModel LoginViewModel.login()',
+            '8 UseCase LoginUseCaseImpl.register(_:)',
+            '9 Mapper RegisterViewModelMapper.getRequest()',
+            '10 Mapper RegisterEntityMapper.init(_:)',
+            '11 Mapper RegisterEntityMapper.domainToRequest(_:)',
+            '12 Repository LoginRepositoryImpl.register(_:)',
+            '13 UseCase sink async',
+            '14 Mapper RegisterViewModelMapper.mapping(_:)',
           ],
         );
         assert.equal(untilSteps[3]!.handledBy, 5);
@@ -426,20 +579,27 @@ test(
           flowsText(db, root, { screen: 'LoginView', until: 'Repository', format: 'compact' }) + '\n',
           'custom-clean-app',
         );
-        // Failure handlers that change no data are left out of the data view.
+        // Failure handlers that change no data are left out of the data view: the empty
+        // AnonymousViewModelMapper.error(_:) is not listed under the first decode.
         const loginData = screenFlows(engine, 'LoginView', { entry: 'LoginView#5' });
         assert.ok('flows' in loginData);
         const decode = loginData.flows.flows[0]!.summary.data;
-        assert.equal(decode.length, 1);
-        assert.deepEqual(decode[0]!.failure, []);
-        assert.ok(decode[0]!.success[0]!.never?.startsWith('cast AnonymousSession → String always fails'));
+        assert.deepEqual(
+          decode.map((data) => data.failure.map((outcome) => `${outcome.when} → ${outcome.target}`)),
+          [
+            ['cast fails (request) → LoginViewModel.error'],
+            ['on failure → LoginViewModel.error', 'cast fails (domain) → LoginViewModel.error'],
+          ],
+        );
         golden('LoginView.flows-calls.txt', flowsText(db, root, { screen: 'LoginView', calls: true }) + '\n', 'custom-clean-app');
         golden('LoginView.flows-steps.txt', flowsText(db, root, { screen: 'LoginView', steps: true }) + '\n', 'custom-clean-app');
-        // The Login action stops at the cast that always fails: `.main` is never written.
+        // The Login action runs the anonymous session, then login() and register(_:): the register mapper writes `.main`.
         const login = screenFlows(engine, 'LoginView', { entry: 'LoginView#5' });
         assert.ok('flows' in login);
         const writeMain = login.flows.flows[0]!.summary.success.find((outcome) => outcome.target === 'LoginViewModel.state')!;
-        assert.ok(writeMain.never?.startsWith('cast AnonymousSession → String always fails'));
+        assert.equal(writeMain.value, '.main');
+        assert.equal(writeMain.at.file, 'SampleArchitecture/RegisterViewModelMapper.swift');
+        assert.equal(writeMain.never, undefined);
       } finally {
         db.close();
       }
@@ -448,6 +608,225 @@ test(
     }
   },
 );
+
+test('define: localization keys from an enum, a struct property or a string, by `sources` rules with keyFrom', async () => {
+  const { path: root, cleanup } = temporaryDirectory();
+  try {
+    mkdirSync(join(root, 'App', 'en.lproj'), { recursive: true });
+    writeFileSync(
+      join(root, 'App', 'en.lproj', 'Localizable.strings'),
+      `"login.title" = "Login";
+"login.button" = "Sign in";
+"custom.key" = "Custom";
+"plain.key" = "Plain";
+"Settings" = "Settings";
+`,
+    );
+    writeFileSync(
+      join(root, 'App', 'Keys.swift'),
+      `import Foundation
+
+enum L10n: String {
+    case title = "login.title"
+    case button = "login.button"
+    func text() -> String { Bundle.main.localizedString(forKey: rawValue, value: nil, table: nil) }
+}
+
+enum Screen {
+    case Settings
+    var title: String { "" }
+}
+
+struct LocalizedKey {
+    let key: String
+    var text: String { NSLocalizedString(key, comment: "") }
+}
+
+extension String {
+    var localized: String { NSLocalizedString(self, comment: "") }
+}
+`,
+    );
+    writeFileSync(
+      join(root, 'App', 'LoginView.swift'),
+      `import SwiftUI
+
+struct LoginView: View {
+    let flag: Bool
+    var body: some View {
+        let key = flag ? L10n.title : L10n.button
+        VStack {
+            Text(L10n.title.text())
+            Text(key.text())
+            Text(Screen.Settings.title)
+            Text(LocalizedKey(key: "custom.key").text)
+            Text("plain.key".localized)
+        }
+    }
+}
+`,
+    );
+    writeFileSync(
+      join(root, 'swiftgraph.json'),
+      `{
+  "sources": [
+    { "id": "app.l10n", "kind": "localization", "call": "L10n.text()", "keyFrom": "rawValue" },
+    { "id": "app.screen", "kind": "localization", "member": "Screen.title", "keyFrom": "case" },
+    { "id": "app.key", "kind": "localization", "member": "LocalizedKey.text", "keyFrom": "key" },
+    { "id": "app.string", "kind": "localization", "member": "String.localized", "keyFrom": "self" }
+  ]
+}
+`,
+    );
+    await build(root, { workers: 1 });
+    const db = openDatabase(databasePath(root), { readonly: true });
+    try {
+      const engine = new FlowEngine(db, root);
+      const login = defineScreen(engine, 'LoginView');
+      assert.ok('definition' in login);
+      // Raw value of the case (a method call, a variable holding either case), the case name, a struct property, the string itself.
+      assert.deepEqual(
+        login.definition.items.map((item) =>
+          item.data[0]!.traced.map((traced) => (traced.origin.kind === 'localization' ? traced.origin.key : traced.origin.kind)).join(
+            ' | ',
+          ),
+        ),
+        ['login.title', 'login.title | login.button', 'Settings', 'custom.key', 'plain.key'],
+      );
+      const title = login.definition.items[0]!.data[0]!.traced[0]!.origin;
+      assert.ok(title.kind === 'localization');
+      assert.deepEqual(title.values, [{ language: 'en', value: 'Login' }]);
+    } finally {
+      db.close();
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test('rules: a source rule on a member needs keyFrom; rule files in YAML', () => {
+  const { path: root, cleanup } = temporaryDirectory();
+  try {
+    writeFileSync(join(root, 'swiftgraph.json'), JSON.stringify({ sources: [{ kind: 'localization', member: 'Localization.localized' }] }));
+    assert.throws(() => loadRules(root, new Set()), /needs "keyFrom"/);
+    // YAML rule file; one rule file per project.
+    writeFileSync(join(root, 'swiftgraph.yaml'), 'localization:\n  - { id: app.ja, defaultLanguage: ja }\n');
+    assert.throws(() => loadRules(root, new Set()), /swiftgraph.yaml and swiftgraph.json: keep one rule file/);
+    rmSync(join(root, 'swiftgraph.json'));
+    const rules = loadRules(root, new Set());
+    assert.equal(rules.localization[0]!.origin, 'swiftgraph.yaml');
+    assert.equal(rules.localization[0]!.defaultLanguage, 'ja');
+  } finally {
+    cleanup();
+  }
+});
+
+test('flows: OUTPUT parameters are the values the next screen receives, named by its parameters and properties', async () => {
+  const { path: root, cleanup } = temporaryDirectory();
+  try {
+    mkdirSync(join(root, 'App'));
+    writeFileSync(
+      join(root, 'App', 'Screens.swift'),
+      `import UIKit
+import SwiftUI
+
+struct Item { let name: String }
+
+final class DetailViewController: UIViewController {
+    var item: Item?
+    var source = ""
+    func configure(with title: String) {}
+}
+
+struct RowView: View {
+    let item: Item
+    init(_ item: Item) { self.item = item }
+    var body: some View { Text(item.name) }
+}
+
+final class ListViewController: UIViewController {
+    let items: [Item] = []
+    func open(_ index: Int) {
+        let detail = DetailViewController()
+        detail.item = items[index]
+        detail.source = "list"
+        detail.configure(with: "Detail")
+        navigationController?.pushViewController(detail, animated: true)
+    }
+    func preview(_ index: Int) {
+        present(UIHostingController(rootView: RowView(items[index])), animated: true)
+    }
+}
+`,
+    );
+    writeFileSync(
+      join(root, 'swiftgraph.json'),
+      JSON.stringify({ inputs: [{ id: 'app.configure', kind: 'configure', method: 'configure(with:)' }] }),
+    );
+    await build(root, { workers: 1 });
+    const db = openDatabase(databasePath(root), { readonly: true });
+    try {
+      const engine = new FlowEngine(db, root);
+      const list = screenFlows(engine, 'ListViewController');
+      assert.ok('flows' in list && list.flows.io);
+      // Properties set and input methods called before the push; an unlabeled argument takes the parameter's name.
+      assert.deepEqual(
+        list.flows.io.outputs.map(
+          (output) =>
+            `${output.to}: ${output.arguments.map((argument) => `${argument.via ? `${argument.via} ` : ''}${argument.label}=${argument.value}`).join(', ')}`,
+        ),
+        ['DetailViewController: property item=items[], property source="list", configure(with:) title="Detail"', 'RowView: item=items[]'],
+      );
+      // The next screen lists the properties its creators set as INPUT.
+      const detail = screenFlows(engine, 'DetailViewController');
+      assert.ok('flows' in detail && detail.flows.io);
+      assert.deepEqual(
+        detail.flows.io.inputs.map((input) => `${input.name} ${input.kind}`),
+        ['title configure', 'item property', 'source property'],
+      );
+    } finally {
+      db.close();
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test('define: a localization rule sets the default language; items show its text', async () => {
+  const { path, cleanup } = temporaryDirectory();
+  try {
+    const root = join(path, 'clean-app');
+    copyFixture(FIXTURE, root);
+    const config = parseYaml(readFileSync(join(root, 'swiftgraph.json'), 'utf8'));
+    config.localization = [{ id: 'app.ja', module: 'Clean*', defaultLanguage: 'ja' }];
+    writeFileSync(join(root, 'swiftgraph.json'), JSON.stringify(config));
+    await build(root, { workers: 1 });
+    const db = openDatabase(databasePath(root), { readonly: true });
+    try {
+      const engine = new FlowEngine(db, root);
+      const view = defineScreen(engine, 'ProfileView');
+      assert.ok('definition' in view);
+      const nickname = view.definition.items.find((item) => item.id === 'ProfileView#5')!;
+      // The Japanese text.
+      assert.equal(
+        datasource(nickname),
+        'ProfileViewModel.nickname; label localized "プロフィール"; placeholder localized "ニックネームを入力"',
+      );
+      // `missing` for a key without Japanese text: the app shows the key.
+      const list = defineScreen(engine, 'ProductListView');
+      assert.ok('definition' in list);
+      assert.equal(datasource(list.definition.items[0]!), 'localized missing');
+      // A module the project's rule covers gets no rule from the project files in the template.
+      assert.deepEqual(parseYaml(rulesText(db, root, ['localization'])).localization, [
+        { id: 'app.ja', module: 'Clean*', defaultLanguage: 'ja' },
+      ]);
+    } finally {
+      db.close();
+    }
+  } finally {
+    cleanup();
+  }
+});
 
 test('define: SwiftData @Query and Core Data @FetchRequest are datasources', async () => {
   const { path: root, cleanup } = temporaryDirectory();

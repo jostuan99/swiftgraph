@@ -27,6 +27,7 @@ test('MCP tools answer over an in-memory transport', async () => {
         'get_impact',
         'get_localization_issues',
         'get_neighbors',
+        'get_outline',
         'get_screen_definition',
         'get_screen_flows',
         'get_source',
@@ -50,6 +51,12 @@ test('MCP tools answer over an in-memory transport', async () => {
       assert.match((await call('get_string', { key: 'add_button' })).text, /vi {2}"Thêm %@"/);
       assert.match((await call('get_strings_for_symbol', { symbol: 'AppView.body' })).text, /Localizable\/items_title/);
       assert.match((await call('get_source', { symbol: 'Store.reduce(_:)' })).text, /private func reduce/);
+      assert.match((await call('get_outline', { target: 'Core/Store.swift' })).text, /\n {2}17-20 public func send\(_ action: Action\)\n/);
+
+      // The legend of a screen tool comes with its first answer only.
+      const first = await call('get_screen_definition', { screen: 'AppView' });
+      assert.match(first.text, /How to read get_screen_definition/);
+      assert.doesNotMatch((await call('get_screen_definition', { screen: 'AppView' })).text, /How to read/);
 
       // Out-of-range input is rejected by the schema, not executed.
       const invalid = await call('get_callers', { symbol: 'Store.send(_:)', depth: 99 });

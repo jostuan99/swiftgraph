@@ -46,7 +46,7 @@ test('install keeps existing content, is idempotent, and uninstall restores it',
     assert.ok(existsSync(join(root, '.cursor', 'rules', 'swiftgraph.mdc')));
     assert.ok(readFileSync(join(root, 'AGENTS.md'), 'utf8').includes('graph_overview'));
     const hook = readFileSync(join(root, '.git', 'hooks', 'post-commit'), 'utf8');
-    assert.ok(hook.startsWith('#!/bin/sh\necho existing\n') && hook.includes('cli.ts build'));
+    assert.ok(hook.startsWith('#!/bin/sh\necho existing\n') && hook.includes('cli.ts sync'));
     assert.equal(statSync(join(root, '.git', 'hooks', 'post-checkout')).mode & 0o111, 0o111);
 
     uninstall(root);

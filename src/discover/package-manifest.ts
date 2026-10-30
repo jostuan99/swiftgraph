@@ -1,6 +1,7 @@
 // Builds the directory → module map from `Package.swift` files, which are
 // parsed with tree-sitter like any other Swift file, and from the folders next
-// to `*.xcodeproj` directories (`project.pbxproj` is never read).
+// to `*.xcodeproj` directories. Of `project.pbxproj` only `developmentRegion`
+// is read: the default language of the project's modules.
 
 import { readFileSync } from 'node:fs';
 import { basename, dirname, join, normalize } from 'node:path';
@@ -25,6 +26,11 @@ export interface ModuleMap {
   entries: ModuleEntry[];
   /** Module of files outside every known directory. */
   rootModule: string;
+  /**
+   * Default (development) language of a module's localized strings: the
+   * package's `defaultLocalization`, or the project's `developmentRegion`.
+   */
+  defaultLanguages?: Record<string, string>;
 }
 
 export interface ManifestTarget {
@@ -50,6 +56,27 @@ export function manifestTargets(source: string): ManifestTarget[] {
   };
   visit(tree.rootNode);
   return targets;
+}
+
+/** `defaultLocalization` of the `Package(...)` declared in a `Package.swift` source. */
+export function manifestDefaultLocalization(source: string): string | null {
+  const tree = parseSwift(source);
+  let found: string | null = null;
+  const visit = (node: SyntaxNode) => {
+    if (found !== null) return;
+    if (node.type === 'call_expression' && node.childForFieldName('function')?.text === 'Package') {
+      found = stringArgument(node, 'defaultLocalization');
+      if (found !== null) return;
+    }
+    for (const child of node.namedChildren) visit(child);
+  };
+  visit(tree.rootNode);
+  return found;
+}
+
+/** `developmentRegion` of a `project.pbxproj` source. */
+export function developmentRegion(source: string): string | null {
+  return /\bdevelopmentRegion\s*=\s*"?([A-Za-z0-9_-]+)"?\s*;/.exec(source)?.[1] ?? null;
 }
 
 function stringArgument(call: SyntaxNode, label: string): string | null {
@@ -81,6 +108,7 @@ export function readModuleMap(
   xcode: XcodeLayout = { projects: [], files: [] },
 ): ModuleMap {
   const entries: ModuleEntry[] = [];
+  const defaultLanguages: Record<string, string> = {};
   for (const [directory, module] of Object.entries(overrides)) {
     entries.push({ directory: trimSlashes(directory), module, source: 'override' });
   }
@@ -92,14 +120,29 @@ export function readModuleMap(
     } catch {
       continue;
     }
+    const language = manifestDefaultLocalization(source);
     for (const target of manifestTargets(source)) {
       const relativeDirectory = target.path ?? `${TARGET_FACTORIES.get(target.factory)}/${target.name}`;
       const directory = trimSlashes(normalize(join(packageDirectory, relativeDirectory)).split('\\').join('/'));
       entries.push({ directory: directory === '.' ? '' : directory, module: target.name, source: 'manifest' });
+      if (language) defaultLanguages[target.name] ??= language;
     }
   }
-  entries.push(...xcodeEntries(xcode, entries));
-  return { entries, rootModule: basename(root) };
+  const xcodeModules = xcodeEntries(xcode, entries);
+  entries.push(...xcodeModules);
+  for (const project of xcode.projects) {
+    let region: string | null = null;
+    try {
+      region = developmentRegion(readFileSync(join(root, project, 'project.pbxproj'), 'utf8'));
+    } catch {
+      continue;
+    }
+    if (!region) continue;
+    const projectDirectory = dirname(project) === '.' ? '' : dirname(project);
+    for (const entry of xcodeModules)
+      if (projectDirectory === '' || entry.directory.startsWith(`${projectDirectory}/`)) defaultLanguages[entry.module] ??= region;
+  }
+  return { entries, rootModule: basename(root), ...(Object.keys(defaultLanguages).length > 0 ? { defaultLanguages } : {}) };
 }
 
 /**

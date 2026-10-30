@@ -31,6 +31,11 @@ test('analysis and report of the fixture', async () => {
       const report = graphReport(db, root);
       assert.match(report, /^# Code graph: mini-app/);
       assert.match(report, /App\.MiniApp \(@main\)/);
+      // Screens for the screen tools: AppView is shown by the App scene, ItemRow inside AppView.
+      assert.match(
+        report,
+        /## Screens\n\n- App\.AppView \[SwiftUI View\] Sources\/App\/AppView\.swift:4\n- Rendered inside or opened from another view: App\.ItemRow\n/,
+      );
       assert.match(report, /\| vi \| 3 \| 43% \|/);
       assert.match(report, /Issues: .*missing_translation 4/);
       // About 2,000 tokens at most.
